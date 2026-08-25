@@ -1,17 +1,20 @@
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import { LayoutDashboard, Cpu, MapPin, Building2, Users, Bell, BarChart3, Settings, LogOut, Sun, Moon, Monitor, X } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { LayoutDashboard, Cpu, MapPin, Building2, Users, BarChart3, Settings, LogOut, Sun, Moon, Monitor, X, Package, FileText, ShieldAlert, FolderGit2 } from 'lucide-react';
 import blackLogo from '../assets/black_logo.png';
 import whiteLogo from '../assets/white_logo.png';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/devices', icon: Cpu, label: 'Devices' },
-    { to: '/locations', icon: MapPin, label: 'Locations', roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
     { to: '/organizations', icon: Building2, label: 'Organizations', roles: ['SUPER_ADMIN'] },
-    { to: '/users', icon: Users, label: 'Users', roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
-    { to: '/alert-rules', icon: Bell, label: 'Alert Rules', roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
+    { to: '/projects', icon: FolderGit2, label: 'Projects', roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER'] },
+    { to: '/locations', icon: MapPin, label: 'Locations (Sites)', roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER', 'LOCATION_USER', 'SITE_USER'] },
+    { to: '/assets', icon: Package, label: 'Barrier Assets' },
+    { to: '/devices', icon: Cpu, label: 'Devices & Sensors' },
+    { to: '/alerts', icon: ShieldAlert, label: 'Alerts & Safety' },
+    { to: '/reports', icon: FileText, label: 'Reports & Audits' },
+    { to: '/users', icon: Users, label: 'User Management', roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN'] },
     { to: '/historical', icon: BarChart3, label: 'Historical Data' },
     { to: '/settings', icon: Settings, label: 'Settings' }
 ];

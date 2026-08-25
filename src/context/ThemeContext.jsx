@@ -1,31 +1,45 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
+import { ThemeContext } from './theme-context';
 
-const ThemeContext = createContext(null);
+const THEMES = new Set(['light', 'dark', 'system']);
+
+const getSavedTheme = () => {
+    try {
+        const saved = localStorage.getItem('rf-theme');
+        return THEMES.has(saved) ? saved : 'system';
+    } catch {
+        return 'system';
+    }
+};
 
 export const ThemeProvider = ({ children }) => {
-    const [theme, setThemeState] = useState(() => {
-        return localStorage.getItem('rf-theme') || 'light';
-    });
+    const [theme, setThemeState] = useState(getSavedTheme);
+    const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     const resolvedTheme = theme === 'system'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        ? (systemDark ? 'dark' : 'light')
         : theme;
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = document.documentElement;
         root.setAttribute('data-theme', resolvedTheme);
-        localStorage.setItem('rf-theme', theme);
+        try {
+            localStorage.setItem('rf-theme', theme);
+        } catch {
+            // Theme still applies when storage is unavailable.
+        }
     }, [theme, resolvedTheme]);
 
     useEffect(() => {
-        if (theme !== 'system') return;
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        const handler = () => setThemeState('system');
+        const handler = (event) => setSystemDark(event.matches);
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
-    }, [theme]);
+    }, []);
 
-    const setTheme = (t) => setThemeState(t);
+    const setTheme = (nextTheme) => {
+        if (THEMES.has(nextTheme)) setThemeState(nextTheme);
+    };
 
     return (
         <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
@@ -33,5 +47,3 @@ export const ThemeProvider = ({ children }) => {
         </ThemeContext.Provider>
     );
 };
-
-export const useTheme = () => useContext(ThemeContext);

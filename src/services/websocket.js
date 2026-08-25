@@ -1,4 +1,16 @@
-const WS_URL = import.meta.env.VITE_WS_URL || 'wss://rock-fall-api.iotblitz.in';
+const getWebSocketBaseUrl = () => {
+  const configured = import.meta.env.VITE_WS_URL;
+  if (typeof window === 'undefined') return configured || 'ws://localhost:3310';
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (!configured || configured === '/ws') return `${protocol}//${window.location.host}`;
+  if (configured.startsWith('/')) {
+    return `${protocol}//${window.location.host}${configured.replace(/\/ws\/?$/, '')}`;
+  }
+  return configured.replace(/\/$/, '').replace(/\/ws$/, '');
+};
+
+const WS_URL = getWebSocketBaseUrl();
 
 class WebSocketService {
   constructor() {
@@ -53,7 +65,7 @@ class WebSocketService {
         }
       };
 
-      this.ws.onerror = (err) => {
+      this.ws.onerror = () => {
         console.warn('[WS] Error occurred');
       };
     } catch (err) {

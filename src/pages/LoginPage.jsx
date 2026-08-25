@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { Shield, Loader2, Mountain, Activity, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import blackLogo from '../assets/black_logo.png';
 import whiteLogo from '../assets/white_logo.png';
@@ -160,21 +160,6 @@ export default function LoginPage() {
                             )}
                         </button>
                     </form>
-
-                    {/* Demo credentials */}
-                    <div className={`mt-8 p-4 rounded-xl border ${isDark ? 'bg-[#111] border-[#222]' : 'bg-[#f8f8f8] border-[#e8e8e8]'}`}>
-                        <p className={`text-xs font-medium mb-2 ${isDark ? 'text-[#555]' : 'text-[#999]'}`}>Demo Credentials</p>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className={`text-xs ${isDark ? 'text-[#777]' : 'text-[#666]'}`}>admin@iotblitz.com</p>
-                                <p className={`text-xs ${isDark ? 'text-[#777]' : 'text-[#666]'}`}>123456</p>
-                            </div>
-                            <button type="button" onClick={() => { setEmail('admin@iotblitz.com'); setPassword('123456'); }}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${isDark ? 'bg-white/[0.06] text-[#999] hover:bg-white/[0.1] hover:text-white' : 'bg-[#111]/[0.05] text-[#666] hover:bg-[#111]/[0.1] hover:text-[#111]'}`}>
-                                Auto-fill
-                            </button>
-                        </div>
-                    </div>
 
                     {/* Footer */}
                     <p className={`text-center text-xs mt-8 ${isDark ? 'text-[#333]' : 'text-[#ccc]'}`}>

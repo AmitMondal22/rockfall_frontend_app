@@ -1,46 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { useTheme } from '../context/ThemeContext';
-import { Plus, Building2, Trash2, MapPin, Cpu, Users, ChevronRight, Edit3, X } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { Plus, Building2, MapPin, Cpu, Users, Trash2, ChevronRight, Edit3, X } from 'lucide-react';
 import { PageListSkeleton } from '../components/Skeleton';
 
 export default function OrganizationsPage() {
     const [orgs, setOrgs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [devices, setDevices] = useState([]);
     const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editOrg, setEditOrg] = useState(null);
     const [form, setForm] = useState({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '' });
+    const { isSuperAdmin } = useAuth();
     const { resolvedTheme } = useTheme();
     const navigate = useNavigate();
     const isDark = resolvedTheme === 'dark';
 
-    useEffect(() => { loadOrgs(); loadDevices(); loadUsers(); }, []);
-    const loadOrgs = () => api.organizations.getAll().then(d => { setOrgs(d.organizations || []); setLoading(false); }).catch(e => { console.error(e); setLoading(false); });
-    const loadDevices = () => api.devices.getAll().then(d => setDevices(d.devices || [])).catch(() => { });
-    const loadUsers = () => api.users.getAll().then(d => setUsers(d.users || [])).catch(() => { });
+    function loadOrgs() {
+        api.organizations.getAll().then(d => {
+            const list = (d.organizations || []).map(o => ({
+                ...o,
+                _id: o._id || o.id,
+                id: o.id || o._id
+            }));
+            setOrgs(list);
+            setLoading(false);
+        }).catch(e => { console.error(e); setLoading(false); });
+    }
 
-    const getOrgDeviceCount = (orgId) => devices.filter(d => d.organizationId === orgId).length;
-    const getOrgUserCount = (orgId) => users.filter(u => u.organizationId === orgId).length;
-    const getOrgOnline = (orgId) => devices.filter(d => d.organizationId === orgId && d.status === 'ONLINE').length;
-    const getOrgAlerts = (orgId) => devices.filter(d => d.organizationId === orgId && d.status === 'ALERT').length;
+    function loadExtra() {
+        api.devices.getAll().then(d => setDevices(d.devices || [])).catch(() => {});
+        api.users.getAll().then(d => setUsers(d.users || [])).catch(() => {});
+    }
+
+    useEffect(() => { loadOrgs(); loadExtra(); }, []);
 
     const resetForm = () => setForm({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '' });
 
-    if (loading) return <PageListSkeleton cardCount={4} />;
-
     const handleCreate = async (e) => {
         e.preventDefault();
-        try { await api.organizations.create(form); setShowForm(false); resetForm(); loadOrgs(); }
-        catch (err) { alert(err.message); }
+        try {
+            await api.organizations.create(form);
+            setShowForm(false); resetForm(); loadOrgs();
+        } catch (err) { alert(err.message); }
     };
 
     const handleEdit = (o, e) => {
         e.stopPropagation();
-        setEditOrg(o._id);
-        setForm({ _id: o._id, name: o.name, address: o.address || '', contactEmail: o.contactEmail || '', contactPhone: o.contactPhone || '', location: o.location || '' });
+        setEditOrg(o._id || o.id);
+        setShowForm(true);
+        setForm({ _id: o._id || o.id, name: o.name, address: o.address || '', contactEmail: o.contactEmail || '', contactPhone: o.contactPhone || '', location: o.location || '' });
     };
 
     const handleUpdate = async (e) => {
@@ -48,7 +60,7 @@ export default function OrganizationsPage() {
         try {
             const { name, address, contactEmail, contactPhone, location } = form;
             await api.organizations.update(editOrg, { name, address, contactEmail, contactPhone, location });
-            setEditOrg(null); resetForm(); loadOrgs();
+            setEditOrg(null); setShowForm(false); resetForm(); loadOrgs();
         } catch (err) { alert(err.message); }
     };
 
@@ -61,11 +73,18 @@ export default function OrganizationsPage() {
     const inputCls = `w-full px-3 py-2.5 bg-surface-2 border border-border rounded-xl text-sm focus:outline-none transition ${isDark ? 'text-white focus:border-white' : 'text-[#111] focus:border-[#111]'}`;
     const btnCls = `rounded-xl text-sm font-semibold transition ${isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'}`;
 
+    if (loading) return <PageListSkeleton cardCount={3} />;
+
+    const getOrgDeviceCount = (orgId) => devices.filter(d => (d.organizationId || d.org_id) === orgId).length;
+    const getOrgUserCount = (orgId) => users.filter(u => (u.organizationId || u.org_id) === orgId).length;
+    const getOrgOnline = (orgId) => devices.filter(d => (d.organizationId || d.org_id) === orgId && d.status === 'ONLINE').length;
+    const getOrgAlerts = (orgId) => devices.filter(d => (d.organizationId || d.org_id) === orgId && d.status === 'ALERT').length;
+
     const formFields = [
-        { key: '_id', label: 'Org ID', ph: 'org_001', disabled: !!editOrg },
-        { key: 'name', label: 'Name', ph: 'TechA Mining' },
-        { key: 'location', label: 'Location', ph: 'Himalaya Region' },
-        { key: 'address', label: 'Full Address', ph: 'Kolkata, WB' },
+        ...(editOrg ? [{ key: '_id', label: 'Org ID (Auto-generated)', ph: 'org_001', disabled: true }] : []),
+        { key: 'name', label: 'Organization Name', ph: 'e.g. Apex Mining Corp', required: true },
+        { key: 'location', label: 'Region / Headquarters', ph: 'e.g. Uttarakhand' },
+        { key: 'address', label: 'Full Address', ph: 'e.g. Dehradun, UK' },
         { key: 'contactEmail', label: 'Email', ph: 'admin@org.com' },
         { key: 'contactPhone', label: 'Phone', ph: '+91...' }
     ];
@@ -74,7 +93,9 @@ export default function OrganizationsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div><h1 className="text-2xl font-bold">Organizations</h1><p className="text-text-muted text-sm mt-1">{orgs.length} organizations</p></div>
-                <button onClick={() => { setShowForm(!showForm); setEditOrg(null); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 ${btnCls}`}><Plus className="w-4 h-4" /> Add Organization</button>
+                {isSuperAdmin && (
+                    <button onClick={() => { setShowForm(!showForm); setEditOrg(null); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 ${btnCls}`}><Plus className="w-4 h-4" /> Add Organization</button>
+                )}
             </div>
 
             {/* Create / Edit Form */}
@@ -87,7 +108,7 @@ export default function OrganizationsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {formFields.map(f => (
                             <div key={f.key}><label className="block text-xs text-text-muted mb-1.5">{f.label}</label>
-                                <input placeholder={f.ph} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} required={f.key === '_id' || f.key === 'name'} disabled={f.disabled}
+                                <input placeholder={f.ph} value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} required={!!f.required} disabled={f.disabled}
                                     className={`${inputCls} ${f.disabled ? 'opacity-50 cursor-not-allowed' : ''}`} /></div>
                         ))}
                     </div>

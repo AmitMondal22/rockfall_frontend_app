@@ -1,17 +1,31 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { AuthContext } from './auth-context';
 
-const AuthContext = createContext(null);
+const normalizeUser = (userData) => {
+    if (!userData) return null;
+    return {
+        ...userData,
+        _id: userData._id || userData.id,
+        id: userData.id || userData._id,
+        organizationId: userData.organizationId || userData.org_id,
+        org_id: userData.org_id || userData.organizationId
+    };
+};
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUserState] = useState(null);
+    const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('accessToken')));
+
+    const setUser = (userData) => setUserState(normalizeUser(userData));
 
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
-        if (token) {
-            api.auth.me().then(data => setUser(data.user)).catch(() => { localStorage.clear(); }).finally(() => setLoading(false));
-        } else { setLoading(false); }
+        if (!token) return;
+        api.auth.me()
+            .then(data => setUser(data.user))
+            .catch(() => localStorage.clear())
+            .finally(() => setLoading(false));
     }, []);
 
     const login = async (email, password) => {
@@ -23,16 +37,38 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        try { await api.auth.logout(); } catch { }
+        try { await api.auth.logout(); } catch (err) { console.warn('Logout request failed:', err.message); }
         localStorage.clear();
         setUser(null);
     };
 
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+    const isOrgAdmin = isSuperAdmin || user?.role === 'ORG_ADMIN';
+    const isProjectUser = isOrgAdmin || user?.role === 'PROJECT_ADMIN' || user?.role === 'PROJECT_USER';
+    const isLocationUser = user?.role === 'LOCATION_USER' || user?.role === 'SITE_USER';
+    const isAssetUser = user?.role === 'ASSET_USER';
+    const canRemoveDevice = Boolean(user && ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER'].includes(user.role));
+    const canAddDevice = Boolean(user && ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER', 'LOCATION_USER', 'SITE_USER', 'ASSET_USER', 'USER'].includes(user.role));
+    const canManageUsers = Boolean(user && ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN'].includes(user.role));
+
     return (
-        <AuthContext.Provider value={{ user, setUser, login, logout, loading, isAdmin: user?.role === 'SUPER_ADMIN', isOrgAdmin: user?.role === 'ORG_ADMIN' || user?.role === 'SUPER_ADMIN' }}>
+        <AuthContext.Provider value={{
+            user,
+            setUser,
+            login,
+            logout,
+            loading,
+            isAdmin: isSuperAdmin,
+            isSuperAdmin,
+            isOrgAdmin,
+            isProjectUser,
+            isLocationUser,
+            isAssetUser,
+            canRemoveDevice,
+            canAddDevice,
+            canManageUsers
+        }}>
             {children}
         </AuthContext.Provider>
     );
 };
-
-export const useAuth = () => useContext(AuthContext);

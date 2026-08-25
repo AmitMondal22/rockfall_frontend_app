@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import api from '../services/api';
 import { Settings as SettingsIcon, Lock, User, Save, CheckCircle, AlertCircle, Edit3, X } from 'lucide-react';
 import { SettingsSkeleton } from '../components/Skeleton';
 
 export default function SettingsPage() {
-    const { user, setUser } = useAuth();
+    const { setUser } = useAuth();
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
     const [profile, setProfile] = useState(null);

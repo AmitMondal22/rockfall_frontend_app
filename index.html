@@ -6,6 +6,21 @@
   <link rel="icon" type="image/svg+xml" href="/white_logo.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="IoT Rockfall Impact Monitoring Platform - Real-time monitoring dashboard" />
+  <script>
+    (() => {
+      let saved;
+      try {
+        saved = localStorage.getItem('rf-theme');
+      } catch {
+        saved = 'system';
+      }
+      const preference = ['light', 'dark', 'system'].includes(saved) ? saved : 'system';
+      const resolved = preference === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : preference;
+      document.documentElement.dataset.theme = resolved;
+    })();
+  </script>
   <title>Rockfall Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -1,5 +1,3 @@
-import { useTheme } from '../context/ThemeContext';
-
 // Base shimmer skeleton block
 export function Skeleton({ className = '', rounded = 'rounded-xl' }) {
     return <div className={`skeleton-shimmer ${rounded} ${className}`} />;

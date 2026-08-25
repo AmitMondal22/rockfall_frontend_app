@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import api from '../services/api';
 import wsService from '../services/websocket';
 import { OrgDashboardSkeleton } from '../components/Skeleton';
-import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Building2, MapPin, Cpu, Users, Battery, Signal, AlertTriangle, Activity, Clock, ChevronRight } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
+import { ArrowLeft, Building2, MapPin, Cpu, Users, Battery, Signal, AlertTriangle, Activity, ChevronRight } from 'lucide-react';
 
 const statusColors = { ONLINE: '#22c55e', ALERT: '#ef4444', MAINTENANCE: '#f59e0b' };
 const statusBadge = { ONLINE: 'bg-success/20 text-success', ALERT: 'bg-danger/20 text-danger', MAINTENANCE: 'bg-warning/20 text-warning' };
@@ -40,16 +40,30 @@ export default function OrgDashboardPage() {
     const [devices, setDevices] = useState([]);
     const [orgUsers, setOrgUsers] = useState([]);
 
-    const fetchOrgData = () => {
-        api.organizations.getById(id).then(d => setOrg(d.organization)).catch(console.error);
+    const fetchOrgData = useCallback(() => {
+        if (!id || id === 'undefined' || id === 'null') {
+            api.organizations.getAll().then(d => {
+                const list = d.organizations || [];
+                if (list.length > 0) {
+                    const first = list[0];
+                    setOrg(first);
+                    setDevices(first.devices || []);
+                    setOrgUsers(first.users || []);
+                }
+            }).catch(console.error);
+            return;
+        }
+        api.organizations.getById(id).then(d => {
+            if (d && d.organization) setOrg(d.organization);
+        }).catch(console.error);
         api.devices.getAll().then(d => {
-            const orgDevices = (d.devices || []).filter(dev => dev.organizationId === id);
+            const orgDevices = (d.devices || []).filter(dev => (dev.organizationId || dev.org_id) === id);
             setDevices(orgDevices);
         }).catch(console.error);
         api.users.getAll().then(d => {
-            setOrgUsers((d.users || []).filter(u => u.organizationId === id));
+            setOrgUsers((d.users || []).filter(u => (u.organizationId || u.org_id) === id));
         }).catch(() => { });
-    };
+    }, [id]);
 
     useEffect(() => {
         fetchOrgData();
@@ -58,7 +72,7 @@ export default function OrgDashboardPage() {
         wsService.connect('/ws/dashboard');
         const unsub = wsService.on('device_update', (msg) => {
             const d = msg.data || {};
-            setDevices(prev => prev.map(dev => dev._id === msg.deviceId ? {
+            setDevices(prev => prev.map(dev => (dev._id === msg.deviceId || dev.id === msg.deviceId) ? {
                 ...dev,
                 status: 'ONLINE',
                 battery: d.battery != null ? d.battery : dev.battery,
@@ -71,12 +85,9 @@ export default function OrgDashboardPage() {
         });
 
         return () => { clearInterval(pollInterval); unsub(); wsService.disconnect(); };
-    }, [id]);
-
-
+    }, [fetchOrgData]);
 
     if (!org) return <OrgDashboardSkeleton />;
-
     const onlineCount = devices.filter(d => d.status === 'ONLINE').length;
     const alertCount = devices.filter(d => d.status === 'ALERT').length;
     const alertDevices = devices.filter(d => d.status === 'ALERT');
@@ -85,7 +96,7 @@ export default function OrgDashboardPage() {
         : [22.5726, 88.3639];
 
     const stats = [
-        { label: 'Total Devices', value: devices.length, icon: Cpu, color: isDark ? 'text-white' : 'text-[#111]' },
+        { label: 'Total Devices', value: devices.length, icon: Cpu, color: 'text-text' },
         { label: 'Online', value: onlineCount, icon: Activity, color: 'text-success' },
         { label: 'Alerts', value: alertCount, icon: AlertTriangle, color: 'text-danger' },
         { label: 'Users', value: orgUsers.length, icon: Users, color: 'text-info' }
@@ -101,7 +112,7 @@ export default function OrgDashboardPage() {
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl font-bold">{org.name}</h1>
                         {org.location && (
-                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${isDark ? 'bg-info/20 text-info' : 'bg-blue-50 text-blue-600'}`}>
+                            <span className="flex items-center gap-1.5 rounded-full bg-info/20 px-3 py-1 text-xs font-medium text-info">
                                 <MapPin className="w-3.5 h-3.5" />{org.location}
                             </span>
                         )}
@@ -216,7 +227,7 @@ export default function OrgDashboardPage() {
                                     <td className="px-4 py-2.5 font-medium">{d.lastEvent?.peak_g ?? '--'}</td>
                                     <td className="px-4 py-2.5 text-text-dim">{d.lastEvent?.type || 'N/A'}</td>
                                     <td className="px-4 py-2.5">
-                                        <button onClick={() => navigate(`/devices/${d._id}`)} className={`text-xs font-medium px-3 py-1 rounded-lg transition ${isDark ? 'text-white hover:bg-surface-3' : 'text-[#111] hover:bg-gray-100'}`}>View →</button>
+                                        <button onClick={() => navigate(`/devices/${d._id}`)} className="rounded-lg px-3 py-1 text-xs font-medium text-text transition hover:bg-surface-3">View →</button>
                                     </td>
                                 </tr>
                             ))}
@@ -239,7 +250,7 @@ export default function OrgDashboardPage() {
                                 <p className="text-sm font-medium">{u.name}</p>
                                 <p className="text-text-dim text-xs">{u.email}</p>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${u.role === 'ORG_ADMIN' ? 'bg-warning/20 text-warning' : u.role === 'SUPER_ADMIN' ? 'bg-white/10 text-white' : 'bg-info/20 text-info'}`}>{u.role}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${u.role === 'ORG_ADMIN' ? 'bg-warning/20 text-warning' : u.role === 'SUPER_ADMIN' ? 'bg-surface-3 text-text' : 'bg-info/20 text-info'}`}>{u.role}</span>
                             <span className="text-text-dim text-xs">{u.assignedDevices?.length || 0} devices</span>
                         </div>
                     ))}

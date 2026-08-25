@@ -26,18 +26,46 @@
     padding: 0;
   }
 
-  html[data-theme="light"] body {
-    font-family: var(--font-sans);
-    background-color: #f5f5f5;
-    color: #111111;
-    -webkit-font-smoothing: antialiased;
+  html[data-theme="light"] {
+    color-scheme: light;
+    --color-primary: #f5f7fa;
+    --color-secondary: #111827;
+    --color-accent: #64748b;
+    --color-surface: #ffffff;
+    --color-surface-2: #f3f5f8;
+    --color-surface-3: #e8ecf2;
+    --color-border: #dfe3e8;
+    --color-border-light: #cbd2dc;
+    --color-text: #111827;
+    --color-text-muted: #64748b;
+    --color-text-dim: #64748b;
   }
 
-  html[data-theme="dark"] body {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --color-primary: #070809;
+    --color-secondary: #f8fafc;
+    --color-accent: #9ca3af;
+    --color-surface: #111315;
+    --color-surface-2: #181b1f;
+    --color-surface-3: #22262b;
+    --color-border: #2a2f36;
+    --color-border-light: #3b424c;
+    --color-text: #f8fafc;
+    --color-text-muted: #a1aab8;
+    --color-text-dim: #9ca3af;
+    --color-success: #22c55e;
+    --color-danger: #ef4444;
+    --color-warning: #f59e0b;
+    --color-info: #60a5fa;
+  }
+
+  body {
     font-family: var(--font-sans);
-    background-color: #000000;
-    color: #ffffff;
+    background-color: var(--color-primary);
+    color: var(--color-text);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
   ::-webkit-scrollbar {
@@ -63,93 +91,26 @@
   }
 }
 
-/* LIGHT THEME — surface / border / text overrides */
-html[data-theme="light"] .bg-primary {
-  background-color: #f5f5f5;
-}
-
-html[data-theme="light"] .bg-surface {
-  background-color: #ffffff;
-}
-
-html[data-theme="light"] .bg-surface-2 {
-  background-color: #f0f0f0;
-}
-
-html[data-theme="light"] .bg-surface-3 {
-  background-color: #e8e8e8;
-}
-
-html[data-theme="light"] .bg-black {
-  background-color: #f5f5f5;
-}
-
-html[data-theme="light"] .border-border {
-  border-color: #e0e0e0;
-}
-
-html[data-theme="light"] .border-border-light {
-  border-color: #d0d0d0;
-}
-
-html[data-theme="light"] .text-text-muted {
-  color: #666666;
-}
-
-html[data-theme="light"] .text-text-dim {
-  color: #999999;
-}
-
-html[data-theme="light"] .placeholder\:text-text-dim::placeholder {
-  color: #999999;
-}
-
-html[data-theme="light"] .bg-white\/10 {
-  background-color: rgba(0, 0, 0, 0.06);
-}
-
-html[data-theme="light"] .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme="light"] .focus\:border-white:focus {
-  border-color: #111111;
-}
-
-/* DARK THEME — surface / border / text overrides */
-html[data-theme="dark"] .bg-primary {
-  background-color: #000000;
-}
-
-html[data-theme="dark"] .bg-surface {
-  background-color: #111111;
-}
-
-html[data-theme="dark"] .bg-surface-2 {
-  background-color: #1a1a1a;
-}
-
-html[data-theme="dark"] .bg-surface-3 {
-  background-color: #222222;
-}
-
-html[data-theme="dark"] .border-border {
-  border-color: #333333;
-}
-
-html[data-theme="dark"] .border-border-light {
-  border-color: #444444;
-}
-
-html[data-theme="dark"] .text-text-muted {
-  color: #999999;
-}
-
-html[data-theme="dark"] .text-text-dim {
-  color: #666666;
-}
-
 /* Leaflet */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.map-container-isolated {
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
+}
+
+.map-container-isolated .leaflet-pane {
+  z-index: 2 !important;
+}
+
+.map-container-isolated .leaflet-top,
+.map-container-isolated .leaflet-bottom {
+  z-index: 3 !important;
+}
+
 html[data-theme="light"] .leaflet-container {
   background: #e8e8e8 !important;
 }

@@ -4,8 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import api from '../services/api';
 import wsService from '../services/websocket';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { Cpu, Battery, Signal, AlertTriangle, Activity, Clock, ChevronRight, Wifi, ShieldCheck, Zap, MapPin } from 'lucide-react';
 import { DashboardSkeleton } from '../components/Skeleton';
 
@@ -47,7 +47,20 @@ export default function DashboardPage() {
 
     const fetchDevices = () => {
         api.devices.getAll().then(d => {
-            setDevices(d.devices || []);
+            const list = (d.devices || []).map(dev => ({
+                ...dev,
+                _id: dev._id || dev.id,
+                id: dev.id || dev._id
+            }));
+            setDevices(list);
+            if (list.length > 0) {
+                setSelected(prev => {
+                    if (!prev) return list[0];
+                    const prevId = prev._id || prev.id;
+                    const found = list.find(item => (item._id || item.id) === prevId);
+                    return found || list[0];
+                });
+            }
             setLoading(false);
         }).catch(e => { console.error(e); setLoading(false); });
     };
@@ -60,93 +73,77 @@ export default function DashboardPage() {
         const unsubStatus = wsService.on('ws_status', (s) => setWsConnected(s.connected));
         const unsub = wsService.on('device_update', (msg) => {
             const d = msg.data || {};
-            setDevices(prev => prev.map(dev => dev._id === msg.deviceId ? {
-                ...dev,
-                status: 'ONLINE',
-                battery: d.battery != null ? d.battery : dev.battery,
-                csq: d.csq ?? dev.csq,
-                lastSeen: d.ts || msg.timestamp || new Date().toISOString(),
-                lastEvent: d.event_type && d.event_type !== 'HEARTBEAT' ? {
-                    type: d.event_type, peak_g: d.peak_g, duration_ms: d.duration_ms, timestamp: d.ts
-                } : dev.lastEvent
-            } : dev));
+            setDevices(prev => prev.map(dev => {
+                const devId = dev._id || dev.id;
+                return devId === msg.deviceId ? {
+                    ...dev,
+                    status: 'ONLINE',
+                    battery: d.battery != null ? d.battery : dev.battery,
+                    csq: d.csq ?? dev.csq,
+                    lastSeen: d.ts || msg.timestamp || new Date().toISOString(),
+                    lastEvent: d.event_type && d.event_type !== 'HEARTBEAT' ? {
+                        type: d.event_type, peak_g: d.peak_g, duration_ms: d.duration_ms, timestamp: d.ts
+                    } : dev.lastEvent
+                } : dev;
+            }));
         });
 
-        return () => { clearInterval(pollInterval); unsub(); unsubStatus(); wsService.disconnect(); };
+        return () => {
+            clearInterval(pollInterval);
+            unsubStatus();
+            unsub();
+            wsService.disconnect();
+        };
     }, []);
-
-    const onlineCount = devices.filter(d => d.status === 'ONLINE').length;
-    const alertCount = devices.filter(d => d.status === 'ALERT').length;
-    const maintenanceCount = devices.filter(d => d.status === 'MAINTENANCE').length;
-    const center = devices.length > 0 ? [devices[0].lat || 22.57, devices[0].lng || 88.36] : [22.5726, 88.3639];
 
     if (loading) return <DashboardSkeleton />;
 
-    const stats = [
-        {
-            label: 'Total Devices', value: devices.length, icon: Cpu,
-            gradient: isDark ? 'from-white/5 to-white/[0.02]' : 'from-slate-100 to-white',
-            iconBg: isDark ? 'bg-white/10' : 'bg-slate-100',
-            color: isDark ? 'text-white' : 'text-slate-900'
-        },
-        {
-            label: 'Online', value: onlineCount, icon: Wifi,
-            gradient: isDark ? 'from-emerald-500/10 to-emerald-500/[0.02]' : 'from-emerald-50 to-white',
-            iconBg: isDark ? 'bg-emerald-500/15' : 'bg-emerald-100',
-            color: 'text-success'
-        },
-        {
-            label: 'Alerts', value: alertCount, icon: AlertTriangle,
-            gradient: isDark ? 'from-red-500/10 to-red-500/[0.02]' : 'from-red-50 to-white',
-            iconBg: isDark ? 'bg-red-500/15' : 'bg-red-100',
-            color: 'text-danger'
-        },
-        {
-            label: 'Maintenance', value: maintenanceCount, icon: ShieldCheck,
-            gradient: isDark ? 'from-amber-500/10 to-amber-500/[0.02]' : 'from-amber-50 to-white',
-            iconBg: isDark ? 'bg-amber-500/15' : 'bg-amber-100',
-            color: 'text-warning'
-        }
-    ];
+    const onlineCount = devices.filter(d => d.status === 'ONLINE').length;
+    const alertCount = devices.filter(d => d.status === 'ALERT').length;
+    const center = devices.length > 0
+        ? [devices.reduce((s, d) => s + (d.lat || 0), 0) / devices.length, devices.reduce((s, d) => s + (d.lng || 0), 0) / devices.length]
+        : [22.5726, 88.3639];
+
+    const selectedId = selected ? (selected._id || selected.id) : null;
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+            {/* Header / Hero */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-text-muted text-sm mt-1">Welcome back, <span className="font-medium">{user?.name}</span></p>
+                    <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
+                    <p className="text-text-muted text-sm mt-1">Real-time rockfall hazard & IoT sensor telemetry</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${wsConnected
-                        ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-600')
-                        : (isDark ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600')
-                        }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                        {wsConnected ? 'Live' : 'Offline'}
-                    </span>
+                <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${wsConnected ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700') : (isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700')}`}>
+                        <Wifi className="w-3.5 h-3.5" />
+                        <span>{wsConnected ? 'Live Stream Active' : 'Polling Data'}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                {stats.map((s, i) => (
-                    <div key={s.label}
-                        className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} bg-surface border border-border rounded-2xl p-5 hover:border-border-light transition-all duration-300 hover:shadow-lg group`}
-                        style={{ animationDelay: `${i * 80}ms`, animation: 'fadeSlideUp 0.4s ease-out both' }}>
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-text-muted text-sm font-medium">{s.label}</span>
-                            <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
-                                <s.icon className={`w-4.5 h-4.5 ${s.color}`} />
+            {/* Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Devices', value: devices.length, sub: 'Registered sensors', icon: Cpu, color: 'text-text' },
+                    { label: 'Online Sensors', value: onlineCount, sub: `${devices.length ? Math.round((onlineCount / devices.length) * 100) : 0}% operational`, icon: Activity, color: 'text-success' },
+                    { label: 'Active Alerts', value: alertCount, sub: alertCount > 0 ? 'Action required' : 'All clear', icon: AlertTriangle, color: alertCount > 0 ? 'text-danger' : 'text-text-muted' },
+                    { label: 'System Health', value: '100%', sub: 'All services online', icon: ShieldCheck, color: 'text-info' }
+                ].map(stat => (
+                    <div key={stat.label} className="bg-surface border border-border rounded-2xl p-5 hover:border-border-hover transition-all duration-200">
+                        <div className="flex items-center justify-between">
+                            <span className="text-text-muted text-xs font-medium">{stat.label}</span>
+                            <div className={`w-9 h-9 rounded-xl ${isDark ? 'bg-white/5' : 'bg-slate-50'} flex items-center justify-center`}>
+                                <stat.icon className={`w-4 h-4 ${stat.color}`} />
                             </div>
                         </div>
-                        <p className={`text-3xl font-bold tracking-tight ${s.color}`}>{s.value}</p>
-                        <div className="mt-2 text-text-dim text-xs">{s.label === 'Total Devices' ? `${devices.length} registered` : `${Math.round((s.value / (devices.length || 1)) * 100)}% of fleet`}</div>
+                        <p className={`text-2xl font-bold mt-2 ${stat.color}`}>{stat.value}</p>
+                        <p className="text-text-dim text-xs mt-1">{stat.sub}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Map + Sidebar */}
+            {/* Main Content Grid: Map + Sidebar */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 {/* Map */}
                 <div className="lg:col-span-2 bg-surface border border-border rounded-2xl overflow-hidden" style={{ minHeight: '350px', height: '500px' }}>
@@ -159,25 +156,28 @@ export default function DashboardPage() {
                     </div>
                     <MapContainer key={resolvedTheme} center={center} zoom={6} style={{ height: 'calc(100% - 48px)', width: '100%' }} attributionControl={false}>
                         <TileLayer url={isDark ? TILE_URLS.dark : TILE_URLS.light} />
-                        {devices.map(d => (
-                            <Marker key={d._id} position={[d.lat || 0, d.lng || 0]} icon={makeIcon(d.status, isDark)}
-                                eventHandlers={{ click: () => setSelected(d) }}>
-                                <Popup>
-                                    <div className="text-sm" style={{ color: '#111', minWidth: 150 }}>
-                                        <p className="font-bold text-[13px]">{d.name}</p>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">{d._id}</p>
-                                        <div className="flex items-center gap-1.5 mt-1.5">
-                                            <span className={`w-2 h-2 rounded-full`} style={{ background: statusColors[d.status] }} />
-                                            <span className="text-[11px] font-medium">{d.status}</span>
+                        {devices.map(d => {
+                            const dId = d._id || d.id;
+                            return (
+                                <Marker key={dId} position={[d.lat || 0, d.lng || 0]} icon={makeIcon(d.status, isDark)}
+                                    eventHandlers={{ click: () => setSelected(d) }}>
+                                    <Popup>
+                                        <div className="text-sm" style={{ color: '#111', minWidth: 150 }}>
+                                            <p className="font-bold text-[13px]">{d.name}</p>
+                                            <p className="text-[11px] text-gray-500 mt-0.5">{dId}</p>
+                                            <div className="flex items-center gap-1.5 mt-1.5">
+                                                <span className={`w-2 h-2 rounded-full`} style={{ background: statusColors[d.status] }} />
+                                                <span className="text-[11px] font-medium">{d.status}</span>
+                                            </div>
+                                            <button onClick={() => navigate(`/devices/${encodeURIComponent(dId)}`)}
+                                                className="mt-2 w-full text-center py-1.5 bg-[#111] text-white rounded-lg text-[11px] font-medium hover:bg-[#333] transition">
+                                                View Details →
+                                            </button>
                                         </div>
-                                        <button onClick={() => navigate(`/devices/${d._id}`)}
-                                            className="mt-2 w-full text-center py-1.5 bg-[#111] text-white rounded-lg text-[11px] font-medium hover:bg-[#333] transition">
-                                            View Details →
-                                        </button>
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        ))}
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
                     </MapContainer>
                 </div>
 
@@ -189,7 +189,7 @@ export default function DashboardPage() {
                             <h2 className="font-semibold text-sm">
                                 {selected ? selected.name : 'Select a Device'}
                             </h2>
-                            {selected && <p className="text-text-dim text-xs mt-0.5">{selected._id}</p>}
+                            {selected && <p className="text-text-dim text-xs mt-0.5">{selectedId}</p>}
                         </div>
                         {selected ? (
                             <div className="p-4">
@@ -213,7 +213,7 @@ export default function DashboardPage() {
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={() => navigate(`/devices/${selected._id}`)}
+                                <button onClick={() => selectedId && navigate(`/devices/${encodeURIComponent(selectedId)}`)}
                                     className={`w-full mt-4 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${isDark ? 'bg-white text-black hover:bg-[#e0e0e0]' : 'bg-[#111] text-white hover:bg-[#333]'}`}>
                                     View Full Details <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -238,35 +238,31 @@ export default function DashboardPage() {
                             {devices.length === 0 ? (
                                 <p className="text-text-dim text-sm text-center py-6">No devices found</p>
                             ) : (
-                                devices.map(d => (
-                                    <button key={d._id} onClick={() => { setSelected(d); }}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 border-b border-border/30 last:border-0 text-left transition-all duration-150 hover:bg-surface-2 ${selected?._id === d._id ? (isDark ? 'bg-white/5' : 'bg-slate-50') : ''}`}>
-                                        <div className="relative">
-                                            <div className={`w-9 h-9 rounded-xl ${statusBg[d.status] || 'bg-gray-100'} flex items-center justify-center`}>
-                                                <Cpu className={`w-4 h-4 ${statusText[d.status] || 'text-text-dim'}`} />
+                                devices.map(d => {
+                                    const dId = d._id || d.id;
+                                    return (
+                                        <button key={dId} onClick={() => { setSelected(d); }}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 border-b border-border/30 last:border-0 text-left transition-all duration-150 hover:bg-surface-2 ${selectedId === dId ? (isDark ? 'bg-white/5' : 'bg-slate-50') : ''}`}>
+                                            <div className="relative">
+                                                <div className={`w-9 h-9 rounded-xl ${statusBg[d.status] || 'bg-gray-100'} flex items-center justify-center`}>
+                                                    <Cpu className={`w-4 h-4 ${statusText[d.status] || 'text-text-dim'}`} />
+                                                </div>
+                                                <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDark ? 'border-[#111]' : 'border-white'}`}
+                                                    style={{ background: statusColors[d.status] || '#666' }} />
                                             </div>
-                                            <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDark ? 'border-[#111]' : 'border-white'}`}
-                                                style={{ background: statusColors[d.status] || '#666' }} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{d.name}</p>
-                                            <p className="text-text-dim text-[11px] truncate">{d._id}</p>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-[11px] text-text-dim">{timeAgo(d.lastSeen)}</p>
-                                            <div className="flex items-center gap-1 mt-0.5 justify-end">
-                                                <Battery className="w-3 h-3 text-text-dim" />
-                                                <span className="text-[11px] text-text-dim">{battPct(d.battery) ?? '--'}%</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-semibold truncate">{d.name}</p>
+                                                <p className="text-[11px] text-text-dim truncate">{dId}</p>
                                             </div>
-                                        </div>
-                                        <ChevronRight className="w-4 h-4 text-text-dim/50 shrink-0" />
-                                    </button>
-                                ))
+                                            <ChevronRight className="w-4 h-4 text-text-dim shrink-0" />
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
 
-                    {/* Recent Alerts */}
+                    {/* Active Alerts */}
                     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
                         <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -287,17 +283,20 @@ export default function DashboardPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {devices.filter(d => d.status === 'ALERT').slice(0, 5).map(d => (
-                                        <button key={d._id} onClick={() => navigate(`/devices/${d._id}`)}
-                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150 ${isDark ? 'bg-red-500/5 hover:bg-red-500/10 border border-red-500/10' : 'bg-red-50 hover:bg-red-100/70 border border-red-100'}`}>
-                                            <div className="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0" />
-                                            <div className="flex-1 min-w-0 text-left">
-                                                <p className="text-sm font-medium truncate">{d.name}</p>
-                                                <p className="text-xs text-text-dim truncate">{d.lastEvent?.type || 'Alert'} • {timeAgo(d.lastSeen)}</p>
-                                            </div>
-                                            <ChevronRight className="w-4 h-4 text-text-dim shrink-0" />
-                                        </button>
-                                    ))}
+                                    {devices.filter(d => d.status === 'ALERT').slice(0, 5).map(d => {
+                                        const dId = d._id || d.id;
+                                        return (
+                                            <button key={dId} onClick={() => navigate(`/devices/${encodeURIComponent(dId)}`)}
+                                                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150 ${isDark ? 'bg-red-500/5 hover:bg-red-500/10 border border-red-500/10' : 'bg-red-50 hover:bg-red-100/70 border border-red-100'}`}>
+                                                <div className="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0" />
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <p className="text-sm font-medium truncate">{d.name}</p>
+                                                    <p className="text-xs text-text-dim truncate">{d.lastEvent?.type || 'Alert'} • {timeAgo(d.lastSeen)}</p>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-text-dim shrink-0" />
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
