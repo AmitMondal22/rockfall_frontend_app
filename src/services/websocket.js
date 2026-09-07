@@ -1,16 +1,31 @@
 const getWebSocketBaseUrl = () => {
-  const configured = import.meta.env.VITE_WS_URL;
+  let configured = import.meta.env.VITE_WS_URL;
   if (typeof window === 'undefined') return configured || 'ws://localhost:3310';
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  if (!configured || configured === '/ws') return `${protocol}//${window.location.host}`;
-  if (configured.startsWith('/')) {
-    return `${protocol}//${window.location.host}${configured.replace(/\/ws\/?$/, '')}`;
-  }
-  return configured.replace(/\/$/, '').replace(/\/ws$/, '');
-};
+  const isHttps = window.location.protocol === 'https:';
+  const defaultProtocol = isHttps ? 'wss:' : 'ws:';
 
-const WS_URL = getWebSocketBaseUrl();
+  if (!configured || configured === '/ws') {
+    return `${defaultProtocol}//${window.location.host}`;
+  }
+
+  if (configured.startsWith('/')) {
+    return `${defaultProtocol}//${window.location.host}${configured.replace(/\/ws\/?$/, '')}`;
+  }
+
+  let url = configured.replace(/\/$/, '').replace(/\/ws$/, '');
+
+  // Upgrade or normalize protocol
+  if (url.startsWith('https://')) {
+    url = url.replace('https://', 'wss://');
+  } else if (url.startsWith('http://')) {
+    url = url.replace('http://', isHttps ? 'wss://' : 'ws://');
+  } else if (isHttps && url.startsWith('ws://')) {
+    url = url.replace('ws://', 'wss://');
+  }
+
+  return url;
+};
 
 class WebSocketService {
   constructor() {
@@ -25,20 +40,29 @@ class WebSocketService {
   }
 
   connect(channel = '/ws/dashboard') {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      if (this.channel === channel) {
+        return;
+      }
+      // If switching channels, disconnect old one first
+      this.disconnect();
+    }
+
     this.channel = channel;
     this.isManualClose = false;
 
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return;
-    }
-
+    const baseUrl = getWebSocketBaseUrl();
     const token = localStorage.getItem('accessToken') || '';
-    const url = `${WS_URL}${channel}${token ? `?token=${token}` : ''}`;
+    const url = `${baseUrl}${channel}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     try {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
+        if (this.isManualClose) {
+          try { this.ws?.close(); } catch (_) {}
+          return;
+        }
         console.log('[WS] Connected to', channel);
         this.currentDelay = this.reconnectDelay;
         this._emit('ws_status', { connected: true });
@@ -47,7 +71,6 @@ class WebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          // Backend sends { type, deviceId, data } format
           const eventName = msg.type || msg.event;
           if (eventName) {
             this._emit(eventName, msg);
@@ -57,30 +80,34 @@ class WebSocketService {
         }
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (event) => {
+        if (this.isManualClose) return;
         console.log('[WS] Disconnected');
         this._emit('ws_status', { connected: false });
-        if (!this.isManualClose) {
-          this._scheduleReconnect();
-        }
+        this._scheduleReconnect();
       };
 
-      this.ws.onerror = () => {
-        console.warn('[WS] Error occurred');
+      this.ws.onerror = (err) => {
+        if (this.isManualClose) return;
+        console.warn('[WS] Connection issue, will retry...');
       };
     } catch (err) {
-      console.error('[WS] Connection failed:', err.message);
-      this._scheduleReconnect();
+      if (!this.isManualClose) {
+        console.error('[WS] Connection failed:', err.message);
+        this._scheduleReconnect();
+      }
     }
   }
 
   _scheduleReconnect() {
-    if (this.reconnectTimer) return;
+    if (this.reconnectTimer || this.isManualClose) return;
     console.log(`[WS] Reconnecting in ${this.currentDelay / 1000}s...`);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect(this.channel);
-      this.currentDelay = Math.min(this.currentDelay * 1.5, this.maxReconnectDelay);
+      if (!this.isManualClose) {
+        this.connect(this.channel);
+        this.currentDelay = Math.min(this.currentDelay * 1.5, this.maxReconnectDelay);
+      }
     }, this.currentDelay);
   }
 
@@ -91,15 +118,30 @@ class WebSocketService {
       this.reconnectTimer = null;
     }
     if (this.ws) {
-      this.ws.close();
+      const socket = this.ws;
       this.ws = null;
+
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+
+      try {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close(1000, 'Normal closure');
+        } else if (socket.readyState === WebSocket.CONNECTING) {
+          // Avoid browser error "WebSocket is closed before the connection is established"
+          socket.onopen = () => {
+            try { socket.close(1000, 'Closed on unmount'); } catch (_) {}
+          };
+        }
+      } catch (_) {}
     }
   }
 
   on(event, callback) {
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(callback);
-    // Return unsubscribe function
     return () => {
       this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
     };
