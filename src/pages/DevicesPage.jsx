@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import wsService from '../services/websocket';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { Plus, Search, Cpu, Battery, Signal, ChevronRight, LayoutGrid, List, Edit3, X, Activity, Clock, Zap, Mountain, Move, Heart } from 'lucide-react';
@@ -31,7 +32,8 @@ export default function DevicesPage() {
                 _id: item._id || item.id,
                 id: item.id || item._id,
                 organizationId: item.organizationId || item.org_id,
-                assetId: item.assetId || item.asset_id
+                assetId: item.assetId || item.asset_id,
+                lastSeen: item.lastSeen || item.last_seen || item.lastEvent?.timestamp || item.ts || item.timestamp || null
             }));
             setDevices(normalized);
             setLoading(false);
@@ -63,7 +65,33 @@ export default function DevicesPage() {
             setAssets(d.assets || []);
         }).catch(() => { });
     }
-    useEffect(() => { loadDevices(); loadOrgs(); loadLocs(); loadAssets(); }, []);
+    useEffect(() => {
+        loadDevices();
+        loadOrgs();
+        loadLocs();
+        loadAssets();
+
+        wsService.connect('/ws/dashboard');
+        const unsub = wsService.on('device_update', (msg) => {
+            const d = msg.data || {};
+            const devId = msg.deviceId || d.device_id || d.uid;
+            if (!devId) return;
+            setDevices(prev => prev.map(dev => (dev._id === devId || dev.id === devId) ? {
+                ...dev,
+                status: 'ONLINE',
+                battery: d.battery != null ? d.battery : dev.battery,
+                csq: d.csq != null ? d.csq : dev.csq,
+                lastSeen: d.timestamp || d.ts || msg.timestamp || new Date().toISOString(),
+                lastEvent: d.event_type && d.event_type !== 'HEARTBEAT' ? {
+                    type: d.event_type, peak_g: d.peak_g, duration_ms: d.duration_ms, timestamp: d.timestamp || d.ts
+                } : dev.lastEvent
+            } : dev));
+        });
+
+        return () => {
+            unsub();
+        };
+    }, []);
 
     if (loading) return <PageListSkeleton cardCount={6} />;
 
