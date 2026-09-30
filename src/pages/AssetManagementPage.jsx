@@ -35,7 +35,7 @@ import 'leaflet/dist/leaflet.css';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { BARRIER_STYLES } from './AddBarrierAssetPage';
+import { BARRIER_STYLES } from '../constants/barrierStyles';
 
 const NUMBER_FORMAT = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 

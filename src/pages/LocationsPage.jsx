@@ -4,7 +4,7 @@ import api from '../services/api';
 import { useTheme } from '../hooks/useTheme';
 import { Plus, MapPin, Cpu, Users, Trash2, ChevronRight, Search, Building2, Edit3, X, Mountain, ShieldCheck, Activity, Shield } from 'lucide-react';
 import { PageListSkeleton } from '../components/Skeleton';
-import { BARRIER_STYLES } from './AddBarrierAssetPage';
+import { BARRIER_STYLES } from '../constants/barrierStyles';
 
 export default function LocationsPage() {
     const [locations, setLocations] = useState([]);

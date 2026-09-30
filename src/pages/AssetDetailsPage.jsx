@@ -36,7 +36,7 @@ import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { wsService } from '../services/websocket';
-import { BARRIER_STYLES } from './AddBarrierAssetPage';
+import { BARRIER_STYLES } from '../constants/barrierStyles';
 import FreeMapLayerControl from '../components/FreeMapLayerControl';
 import {
   FREE_TILE_LAYERS,
