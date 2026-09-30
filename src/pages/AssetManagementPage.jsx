@@ -955,7 +955,7 @@ export default function AssetManagementPage() {
                           >
                             <TileLayer
                               url={isDark
-                                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
                                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
                             />
                             <MapResizer />

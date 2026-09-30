@@ -1,30 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
 import api from '../services/api';
 import wsService from '../services/websocket';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { Cpu, Battery, Signal, AlertTriangle, Activity, Clock, ChevronRight, Wifi, ShieldCheck, Zap, MapPin } from 'lucide-react';
 import { DashboardSkeleton } from '../components/Skeleton';
+import FreeMapLayerControl from '../components/FreeMapLayerControl';
+import {
+    FREE_TILE_LAYERS,
+    getDefaultFreeTile,
+    createDeviceMarkerIcon,
+    MapBoundsFitter,
+    MapResizer
+} from '../utils/mapUtils';
 
 const statusColors = { ONLINE: '#22c55e', ALERT: '#ef4444', MAINTENANCE: '#f59e0b' };
 const statusBg = { ONLINE: 'bg-emerald-500/10', ALERT: 'bg-red-500/10', MAINTENANCE: 'bg-amber-500/10' };
 const statusText = { ONLINE: 'text-success', ALERT: 'text-danger', MAINTENANCE: 'text-warning' };
 const csqPct = (v) => v != null ? `${Math.round((v / 31) * 100)}%` : null;
 const battPct = (v) => v != null ? Math.min(Math.round((v / 13) * 100), 100) : null;
-
-const makeIcon = (status, isDark) => L.divIcon({
-    className: '',
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${statusColors[status] || '#666'};border:3px solid ${isDark ? '#111' : '#fff'};box-shadow:0 0 14px ${statusColors[status] || '#666'}50;transition:all .3s"></div>`,
-    iconSize: [28, 28], iconAnchor: [14, 14]
-});
-
-const TILE_URLS = {
-    light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-};
 
 const timeAgo = (ts) => {
     if (!ts) return 'Never';
@@ -40,10 +36,16 @@ export default function DashboardPage() {
     const [selected, setSelected] = useState(null);
     const [wsConnected, setWsConnected] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [activeLayerId, setActiveLayerId] = useState('auto');
     const { user } = useAuth();
     const { resolvedTheme } = useTheme();
     const navigate = useNavigate();
     const isDark = resolvedTheme === 'dark';
+
+    const activeTileLayer = useMemo(() => {
+        if (activeLayerId === 'auto') return getDefaultFreeTile(isDark);
+        return FREE_TILE_LAYERS[activeLayerId] || getDefaultFreeTile(isDark);
+    }, [activeLayerId, isDark]);
 
     const fetchDevices = () => {
         api.devices.getAll().then(d => {
@@ -146,39 +148,82 @@ export default function DashboardPage() {
             {/* Main Content Grid: Map + Sidebar */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 {/* Map */}
-                <div className="lg:col-span-2 bg-surface border border-border rounded-2xl overflow-hidden" style={{ minHeight: '350px', height: '500px' }}>
-                    <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                <div className="lg:col-span-2 bg-surface border border-border rounded-2xl overflow-hidden relative flex flex-col shadow-sm" style={{ minHeight: '380px', height: '520px' }}>
+                    <div className="px-5 py-3.5 border-b border-border flex items-center justify-between shrink-0 bg-surface-2/40">
                         <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-text-muted" />
-                            <h2 className="font-semibold text-sm">Device Map</h2>
+                            <MapPin className="w-4 h-4 text-indigo-400" />
+                            <h2 className="font-semibold text-sm">Real-time Telemetry Sensor Map</h2>
                         </div>
-                        <span className="text-text-dim text-xs">{devices.length} devices</span>
+                        <span className="text-text-dim text-xs font-semibold">{devices.length} sensors mapped</span>
                     </div>
-                    <MapContainer key={resolvedTheme} center={center} zoom={6} style={{ height: 'calc(100% - 48px)', width: '100%' }} attributionControl={false}>
-                        <TileLayer url={isDark ? TILE_URLS.dark : TILE_URLS.light} />
-                        {devices.map(d => {
-                            const dId = d._id || d.id;
-                            return (
-                                <Marker key={dId} position={[d.lat || 0, d.lng || 0]} icon={makeIcon(d.status, isDark)}
-                                    eventHandlers={{ click: () => setSelected(d) }}>
-                                    <Popup>
-                                        <div className="text-sm" style={{ color: '#111', minWidth: 150 }}>
-                                            <p className="font-bold text-[13px]">{d.name}</p>
-                                            <p className="text-[11px] text-gray-500 mt-0.5">{dId}</p>
-                                            <div className="flex items-center gap-1.5 mt-1.5">
-                                                <span className={`w-2 h-2 rounded-full`} style={{ background: statusColors[d.status] }} />
-                                                <span className="text-[11px] font-medium">{d.status}</span>
+
+                    <div className="flex-1 w-full relative map-container-isolated">
+                        <FreeMapLayerControl
+                            currentLayerId={activeLayerId}
+                            onSelectLayer={setActiveLayerId}
+                            isDark={isDark}
+                            position="top-right"
+                        />
+
+                        <MapContainer
+                            key={`${resolvedTheme}-${activeLayerId}`}
+                            center={center}
+                            zoom={6}
+                            style={{ height: '100%', width: '100%' }}
+                            attributionControl={false}
+                        >
+                            <TileLayer
+                                url={activeTileLayer.url}
+                                attribution={activeTileLayer.attribution}
+                                maxZoom={activeTileLayer.maxZoom || 19}
+                                subdomains={activeTileLayer.subdomains || 'abc'}
+                            />
+                            <MapResizer />
+                            <MapBoundsFitter points={devices.map(d => ({ lat: d.lat, lng: d.lng }))} maxZoom={14} />
+
+                            {devices.map(d => {
+                                const dId = d._id || d.id;
+                                const isSelected = selectedId === dId;
+                                const markerIcon = createDeviceMarkerIcon({
+                                    status: d.status,
+                                    isDark,
+                                    eventType: d.lastEvent?.type,
+                                    selected: isSelected,
+                                    size: isSelected ? 36 : 30
+                                });
+
+                                return (
+                                    <Marker
+                                        key={dId}
+                                        position={[d.lat || 0, d.lng || 0]}
+                                        icon={markerIcon}
+                                        eventHandlers={{ click: () => setSelected(d) }}
+                                    >
+                                        <Popup>
+                                            <div className="text-sm p-1" style={{ color: '#111', minWidth: 160 }}>
+                                                <p className="font-bold text-[13px]">{d.name}</p>
+                                                <p className="text-[11px] font-mono text-gray-500 mt-0.5">{dId}</p>
+                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                    <span className="w-2 h-2 rounded-full" style={{ background: statusColors[d.status] || '#666' }} />
+                                                    <span className="text-[11px] font-semibold">{d.status}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-200 text-[11px] text-slate-700">
+                                                    <div>Battery: <b>{battPct(d.battery) != null ? `${battPct(d.battery)}%` : '--'}</b></div>
+                                                    <div>Signal: <b>{csqPct(d.csq) ?? '--'}</b></div>
+                                                </div>
+                                                <button
+                                                    onClick={() => navigate(`/devices/${encodeURIComponent(dId)}`)}
+                                                    className="mt-2.5 w-full text-center py-1.5 bg-[#111] text-white rounded-lg text-[11px] font-medium hover:bg-[#333] transition"
+                                                >
+                                                    View Details →
+                                                </button>
                                             </div>
-                                            <button onClick={() => navigate(`/devices/${encodeURIComponent(dId)}`)}
-                                                className="mt-2 w-full text-center py-1.5 bg-[#111] text-white rounded-lg text-[11px] font-medium hover:bg-[#333] transition">
-                                                View Details →
-                                            </button>
-                                        </div>
-                                    </Popup>
-                                </Marker>
-                            );
-                        })}
-                    </MapContainer>
+                                        </Popup>
+                                    </Marker>
+                                );
+                            })}
+                        </MapContainer>
+                    </div>
                 </div>
 
                 {/* Sidebar */}

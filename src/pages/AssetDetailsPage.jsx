@@ -36,6 +36,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { wsService } from '../services/websocket';
 import { BARRIER_STYLES } from './AddBarrierAssetPage';
+import FreeMapLayerControl from '../components/FreeMapLayerControl';
+import {
+  FREE_TILE_LAYERS,
+  getDefaultFreeTile
+} from '../utils/mapUtils';
 
 const NUMBER_FORMAT = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 const LOAD_FRESH_MS = 15 * 60 * 1000;
@@ -223,7 +228,13 @@ export default function AssetDetailsPage() {
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState('');
 
+  const [activeLayerId, setActiveLayerId] = useState('auto');
   const isDark = resolvedTheme === 'dark';
+
+  const activeTileLayer = useMemo(() => {
+    if (activeLayerId === 'auto') return getDefaultFreeTile(isDark);
+    return FREE_TILE_LAYERS[activeLayerId] || getDefaultFreeTile(isDark);
+  }, [activeLayerId, isDark]);
 
   const loadData = useCallback(async ({ quiet = false } = {}) => {
     if (!id) return;
@@ -523,18 +534,25 @@ export default function AssetDetailsPage() {
           </div>
 
           <div className="h-[460px] w-full relative bg-surface-2 map-container-isolated">
+            <FreeMapLayerControl
+              currentLayerId={activeLayerId}
+              onSelectLayer={setActiveLayerId}
+              isDark={isDark}
+              position="top-right"
+            />
+
             <MapContainer
-              key={`${id}-${resolvedTheme}-${points.length}`}
+              key={`${id}-${resolvedTheme}-${activeLayerId}-${points.length}`}
               center={points[0] ? [points[0].lat, points[0].lng] : [18.272, 83.078]}
               zoom={15}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom
             >
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url={isDark
-                  ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+                url={activeTileLayer.url}
+                attribution={activeTileLayer.attribution}
+                maxZoom={activeTileLayer.maxZoom || 19}
+                subdomains={activeTileLayer.subdomains || 'abc'}
               />
               <MapResizer />
               <FitMapBounds points={points} />
@@ -888,7 +906,7 @@ export default function AssetDetailsPage() {
                           >
                             <TileLayer
                               url={isDark
-                                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
                                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
                             />
                             <MapResizer />

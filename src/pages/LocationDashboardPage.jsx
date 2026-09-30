@@ -2,12 +2,19 @@ import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import L from 'leaflet';
 import api from '../services/api';
 import wsService from '../services/websocket';
 import { OrgDashboardSkeleton } from '../components/Skeleton';
 import { useTheme } from '../hooks/useTheme';
 import { ArrowLeft, MapPin, Cpu, Users, Battery, Signal, AlertTriangle, Activity, Clock, Zap, ChevronRight, Mountain, Heart, Move, RefreshCw, AlertCircle, ShieldCheck } from 'lucide-react';
+import FreeMapLayerControl from '../components/FreeMapLayerControl';
+import {
+    FREE_TILE_LAYERS,
+    getDefaultFreeTile,
+    createDeviceMarkerIcon,
+    MapBoundsFitter,
+    MapResizer
+} from '../utils/mapUtils';
 
 const statusColors = { ONLINE: '#22c55e', ALERT: '#ef4444', MAINTENANCE: '#f59e0b', OFFLINE: '#94a3b8' };
 const statusBadge = { ONLINE: 'bg-success/20 text-success', ALERT: 'bg-danger/20 text-danger', MAINTENANCE: 'bg-warning/20 text-warning', OFFLINE: 'bg-slate-500/20 text-slate-400' };
@@ -15,33 +22,21 @@ const csqPct = (v) => v != null && !isNaN(Number(v)) ? `${Math.min(Math.round((N
 const battPct = (v) => v != null && !isNaN(Number(v)) ? `${Math.max(0, Math.min(Math.round((Number(v) / 13) * 100), 100))}%` : '--';
 const eventColors = { ROCKFALL: '#ef4444', HUMAN_ACTIVITY: '#f59e0b', HUMAN: '#f59e0b', MOTION: '#3b82f6', HEARTBEAT: '#22c55e', OTHER: '#a855f7' };
 const eventIcons = { ROCKFALL: Mountain, HUMAN_ACTIVITY: Users, HUMAN: Users, MOTION: Move, HEARTBEAT: Heart, OTHER: Activity };
-const TILE = { light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' };
 
 const EVENT_EMOJIS = { ROCKFALL: '🪨', HUMAN_ACTIVITY: '🚶', HUMAN: '🚶', MOTION: '🔄', HEARTBEAT: '💚', OTHER: '⚡' };
 const EVENT_LABELS = { ROCKFALL: 'Rockfall', HUMAN_ACTIVITY: 'Human', HUMAN: 'Human', MOTION: 'Motion', HEARTBEAT: 'Heartbeat', OTHER: 'Telemetry' };
-
-const makeIcon = (status, isDark, eventType) => {
-    const emoji = EVENT_EMOJIS[eventType] || '📡';
-    const bg = statusColors[status] || '#666';
-    return L.divIcon({
-        className: '', iconSize: [36, 36], iconAnchor: [18, 18],
-        html: `<div style="width:36px;height:36px;border-radius:50%;background:${bg};border:3px solid ${isDark ? '#111' : '#fff'};box-shadow:0 0 10px ${bg}50;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1">${emoji}</div>`
-    });
-};
-
-const alertIcon = (isDark, eventType) => {
-    const emoji = EVENT_EMOJIS[eventType] || '⚠️';
-    return L.divIcon({
-        className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-        html: `<div style="width:38px;height:38px;border-radius:50%;background:#ef4444;border:3px solid ${isDark ? '#111' : '#fff'};box-shadow:0 0 16px #ef444480;display:flex;align-items:center;justify-content:center;animation:pulse 2s infinite;font-size:15px;line-height:1">${emoji}</div>`
-    });
-};
 
 export default function LocationDashboardPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { resolvedTheme } = useTheme();
+    const [activeLayerId, setActiveLayerId] = useState('auto');
     const isDark = resolvedTheme === 'dark';
+
+    const activeTileLayer = useMemo(() => {
+        if (activeLayerId === 'auto') return getDefaultFreeTile(isDark);
+        return FREE_TILE_LAYERS[activeLayerId] || getDefaultFreeTile(isDark);
+    }, [activeLayerId, isDark]);
 
     const [loc, setLoc] = useState(null);
     const [devices, setDevices] = useState([]);
@@ -328,7 +323,7 @@ export default function LocationDashboardPage() {
             {/* Main Content Grid: Interactive Map + Alerts Panel */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 {/* Interactive Site Map */}
-                <div className="lg:col-span-2 bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-sm" style={{ minHeight: '400px', height: '500px' }}>
+                <div className="lg:col-span-2 bg-surface border border-border rounded-2xl overflow-hidden flex flex-col shadow-sm relative" style={{ minHeight: '400px', height: '520px' }}>
                     <div className="px-5 py-3.5 border-b border-border flex items-center justify-between shrink-0 bg-surface-2/40">
                         <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-indigo-400" />
@@ -337,14 +332,46 @@ export default function LocationDashboardPage() {
                         <span className="text-text-dim text-xs font-medium">{devices.length} sensors mapped</span>
                     </div>
 
-                    <div className="flex-1 w-full relative">
-                        <MapContainer key={resolvedTheme} center={center} zoom={14} style={{ height: '100%', width: '100%' }} attributionControl={false}>
-                            <TileLayer url={isDark ? TILE.dark : TILE.light} />
+                    <div className="flex-1 w-full relative map-container-isolated">
+                        <FreeMapLayerControl
+                            currentLayerId={activeLayerId}
+                            onSelectLayer={setActiveLayerId}
+                            isDark={isDark}
+                            position="top-right"
+                        />
+
+                        <MapContainer
+                            key={`${resolvedTheme}-${activeLayerId}`}
+                            center={center}
+                            zoom={14}
+                            style={{ height: '100%', width: '100%' }}
+                            attributionControl={false}
+                        >
+                            <TileLayer
+                                url={activeTileLayer.url}
+                                attribution={activeTileLayer.attribution}
+                                maxZoom={activeTileLayer.maxZoom || 19}
+                                subdomains={activeTileLayer.subdomains || 'abc'}
+                            />
+                            <MapResizer />
+                            <MapBoundsFitter
+                                points={[
+                                    ...devices.map(d => ({ lat: d.lat, lng: d.lng })),
+                                    ...(loc?.assets || []).flatMap(a => a.coordinates || [])
+                                ]}
+                                maxZoom={16}
+                            />
                             {devices.map(d => {
                                 const dId = d._id || d.id;
                                 const evtType = d.lastEvent?.type || 'OTHER';
                                 const isAlert = d.status === 'ALERT';
-                                const icon = isAlert ? alertIcon(isDark, evtType) : makeIcon(d.status, isDark, evtType);
+                                const icon = createDeviceMarkerIcon({
+                                    status: d.status,
+                                    isDark,
+                                    eventType: evtType,
+                                    selected: false,
+                                    size: isAlert ? 36 : 30
+                                });
                                 const dLat = (d.lat != null && !isNaN(Number(d.lat))) ? Number(d.lat) : defaultLat;
                                 const dLng = (d.lng != null && !isNaN(Number(d.lng))) ? Number(d.lng) : defaultLng;
 
@@ -355,7 +382,7 @@ export default function LocationDashboardPage() {
                                                 <p className="font-bold text-sm">{d.name}</p>
                                                 <p className="text-[11px] text-gray-500 font-mono">{dId}</p>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusBadge[d.status]}`}>{d.status}</span>
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusBadge[d.status] || 'bg-slate-500/20 text-slate-400'}`}>{d.status}</span>
                                                     <span className="text-[11px]">🔋 {battPct(d.battery)}</span>
                                                 </div>
                                                 <div className="mt-1 text-[11px]">
@@ -363,7 +390,7 @@ export default function LocationDashboardPage() {
                                                 </div>
                                                 {d.lastEvent && (
                                                     <div style={{ marginTop: 6, padding: '4px 8px', borderRadius: 6, background: `${eventColors[evtType] || '#666'}15`, fontSize: 11 }}>
-                                                        <span style={{ color: eventColors[evtType] || '#666', fontWeight: 600 }}>{EVENT_EMOJIS[evtType]} {EVENT_LABELS[evtType]}</span>
+                                                        <span style={{ color: eventColors[evtType] || '#666', fontWeight: 600 }}>{EVENT_EMOJIS[evtType] || '⚡'} {EVENT_LABELS[evtType] || 'Event'}</span>
                                                         {d.lastEvent?.peak_g != null && <span style={{ marginLeft: 8 }}>Peak: <b>{parseFloat(d.lastEvent.peak_g).toFixed(3)}g</b></span>}
                                                     </div>
                                                 )}
