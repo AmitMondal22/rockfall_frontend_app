@@ -24,6 +24,7 @@ import {
   Zap,
   Boxes,
   Radio,
+  RotateCcw,
   X
 } from 'lucide-react';
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
@@ -104,8 +105,20 @@ const pointAlongPath = (points, positionPct) => {
   return points.at(-1);
 };
 
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 function MapViewport({ points, locationPoint }) {
   const map = useMap();
+  const hasInitializedRef = useState(false);
 
   useEffect(() => {
     if (points.length >= 2) {
@@ -120,7 +133,7 @@ function MapViewport({ points, locationPoint }) {
       return;
     }
     if (locationPoint) map.setView([locationPoint.lat, locationPoint.lng], 14);
-  }, [locationPoint, map, points]);
+  }, [locationPoint, map]);
 
   return null;
 }
@@ -204,6 +217,7 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
       scrollWheelZoom
     >
       <TileLayer attribution={tile.attribution} url={tile.url} />
+      <MapResizer />
       <MapViewport points={points} locationPoint={locationPoint} />
       <MapClickHandler onAddPoint={onAddPoint} />
 
@@ -336,7 +350,8 @@ export default function AddBarrierAssetPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { user, isAdmin, isOrgAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isOrgAdmin, isProjectUser, isLocationUser } = useAuth();
+  const canManageBarrier = isSuperAdmin || isAdmin || isOrgAdmin || isProjectUser || isLocationUser;
   const { resolvedTheme } = useTheme();
 
   const [form, setForm] = useState(() => blankForm(isAdmin ? '' : String(user?.organizationId || '')));
@@ -355,7 +370,7 @@ export default function AddBarrierAssetPage() {
   }, [isAdmin, user?.organizationId, isEdit]);
 
   useEffect(() => {
-    if (!isOrgAdmin) {
+    if (!canManageBarrier && !loading) {
       setLoading(false);
       return undefined;
     }
@@ -367,10 +382,10 @@ export default function AddBarrierAssetPage() {
       try {
         const organizationRequest = isAdmin
           ? api.organizations.getAll()
-          : api.organizations.getById(user.organizationId);
+          : (user?.organizationId ? api.organizations.getById(user.organizationId) : api.organizations.getAll());
         const [organizationResponse, locationResponse] = await Promise.all([
           organizationRequest,
-          api.locations.getAll(isAdmin ? undefined : user.organizationId),
+          api.locations.getAll(isAdmin ? undefined : user?.organizationId),
         ]);
         if (!active) return;
 
@@ -404,20 +419,35 @@ export default function AddBarrierAssetPage() {
           const assetRes = await api.assets.getById(id);
           const assetData = assetRes.asset || assetRes.data || assetRes;
           if (assetData) {
-            const rawCoords = Array.isArray(assetData.coordinates) ? assetData.coordinates : [];
-            const specs = assetData.specifications || {};
-            setAttachedDevices(assetData.devices || []);
+            let rawCoords = assetData.coordinates || [];
+            if (typeof rawCoords === 'string') {
+              try { rawCoords = JSON.parse(rawCoords); } catch (e) { rawCoords = []; }
+            }
+            if (!Array.isArray(rawCoords)) rawCoords = [];
+
+            const specs = typeof assetData.specifications === 'string'
+              ? (() => { try { return JSON.parse(assetData.specifications); } catch (e) { return {}; } })()
+              : (assetData.specifications || {});
+
+            setAttachedDevices(Array.isArray(assetData.devices) ? assetData.devices : []);
             setForm({
-              id: assetData.id || assetData._id,
+              id: String(assetData.id || assetData._id || id),
               name: assetData.name || '',
-              organizationId: assetData.org_id || assetData.organizationId || '',
-              locationId: assetData.location_id || assetData.locationId || '',
+              organizationId: String(assetData.org_id || assetData.organizationId || ''),
+              locationId: String(assetData.location_id || assetData.locationId || ''),
               barrierType: assetData.asset_type || specs.barrierType || 'FENCE_BARRIER',
               capacityKj: String(specs.capacityKj ?? '2000'),
               lengthM: String(specs.lengthM ?? ''),
               heightM: String(specs.heightM ?? '4.5'),
               description: assetData.description || specs.description || '',
-              coordinates: rawCoords.map(c => ({ lat: String(c.lat), lng: String(c.lng) }))
+              coordinates: rawCoords.map(c => {
+                if (Array.isArray(c)) {
+                  return { lat: String(c[0]), lng: String(c[1]) };
+                }
+                const lat = c?.lat ?? c?.latitude;
+                const lng = c?.lng ?? c?.longitude;
+                return { lat: String(lat ?? ''), lng: String(lng ?? '') };
+              }).filter(c => c.lat !== '' && c.lng !== '')
             });
           }
         } else if (!form.organizationId && loadedOrganizations.length === 1) {
@@ -438,7 +468,7 @@ export default function AddBarrierAssetPage() {
 
     loadData();
     return () => { active = false; };
-  }, [id, isEdit, isAdmin, isOrgAdmin, loadAttempt, user?.organizationId]);
+  }, [id, isEdit, isAdmin, canManageBarrier, loadAttempt, user?.organizationId]);
 
   const organizationOptions = useMemo(() => {
     const values = [...organizations];
@@ -584,7 +614,7 @@ export default function AddBarrierAssetPage() {
     }
   };
 
-  if (!isOrgAdmin) {
+  if (!canManageBarrier) {
     return (
       <div className="mx-auto max-w-3xl text-text">
         <button type="button" onClick={() => navigate('/assets')} className="mb-5 inline-flex items-center gap-2 text-sm text-text-muted transition hover:text-text">
@@ -592,8 +622,8 @@ export default function AddBarrierAssetPage() {
         </button>
         <section className="rounded-3xl border border-border bg-surface p-8 text-center shadow-sm">
           <ShieldCheck className="mx-auto h-10 w-10 text-text-muted" />
-          <h1 className="mt-4 text-xl font-semibold">Asset creation requires administrator access</h1>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-text-muted">Organization administrators can register and configure physical barriers.</p>
+          <h1 className="mt-4 text-xl font-semibold">Asset management requires administrator access</h1>
+          <p className="mx-auto mt-2 max-w-lg text-sm text-text-muted">Administrators and authorized project engineers can register and configure physical barriers.</p>
         </section>
       </div>
     );
