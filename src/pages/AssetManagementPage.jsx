@@ -27,7 +27,8 @@ import {
   Signal,
   Trash2,
   X,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -572,11 +573,11 @@ export default function AssetManagementPage() {
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-xs text-text outline-none focus:border-indigo-500 transition"
             >
               <option value="">All Barrier Types</option>
-              <option value="FENCE_BARRIER">🛡️ Flexible Catch Fence</option>
-              <option value="DRAPERY_NET">🕸️ Drapery Mesh / Net</option>
-              <option value="ROCK_SHED">🏛️ Protective Rock Shed</option>
-              <option value="ATTENUATOR">⚡ Attenuator System</option>
-              <option value="EMBANKMENT">🧱 Reinforced Embankment</option>
+              <option value="FENCE_BARRIER">Flexible Catch Fence</option>
+              <option value="DRAPERY_NET">Drapery Mesh / Net</option>
+              <option value="ROCK_SHED">Protective Rock Shed</option>
+              <option value="ATTENUATOR">Attenuator System</option>
+              <option value="EMBANKMENT">Reinforced Embankment</option>
             </select>
           </div>
 
@@ -661,7 +662,7 @@ export default function AssetManagementPage() {
                   {/* Top Badges */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <span>{style.icon}</span>
+                      {style.Icon ? <style.Icon className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
                       <span>{style.name}</span>
                     </span>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${statusTone(asset.status)}`}>
@@ -786,7 +787,7 @@ export default function AssetManagementPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          <span>{style.icon}</span>
+                          {style.Icon ? <style.Icon className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
                           <span>{style.name}</span>
                         </span>
                       </td>
@@ -938,7 +939,10 @@ export default function AssetManagementPage() {
                     {Array.isArray(attachAsset.coordinates) && attachAsset.coordinates.length >= 2 && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-[11px] text-text-muted">
-                          <span>📍 <b>Interactive Map Placement:</b> Click along the line to pick</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <b>Interactive Map Placement:</b> Click along the line to pick
+                          </span>
                           <span className="font-mono text-indigo-400 font-bold">
                             {currentMountPoints.lat ? `${currentMountPoints.lat.toFixed(5)}, ${currentMountPoints.lng.toFixed(5)}` : ''}
                           </span>

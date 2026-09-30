@@ -20,7 +20,9 @@ import {
   Mountain,
   ShieldCheck,
   Cpu,
-  Key
+  Key,
+  Crown,
+  User
 } from 'lucide-react';
 import { PageListSkeleton } from '../components/Skeleton';
 import { useTheme } from '../hooks/useTheme';
@@ -31,49 +33,49 @@ const ROLE_INFO = {
     label: 'Super Admin',
     desc: 'Full global system control across all organizations & projects',
     badge: 'bg-purple-500/10 text-purple-400 border border-purple-500/30 font-bold',
-    icon: '👑'
+    Icon: Crown
   },
   ORG_ADMIN: {
     label: 'Org Admin',
     desc: 'Manages entire organization, all projects, sites & assets',
     badge: 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold',
-    icon: '🏢'
+    Icon: Building2
   },
   PROJECT_USER: {
     label: 'Project User',
     desc: 'Manages project sites, barrier assets, and can add/remove devices',
     badge: 'bg-blue-500/10 text-blue-400 border border-blue-500/30 font-bold',
-    icon: '📁'
+    Icon: FolderGit2
   },
   PROJECT_ADMIN: {
     label: 'Project Admin',
     desc: 'Project Administrator with full project control and device removal access',
     badge: 'bg-blue-500/10 text-blue-400 border border-blue-500/30 font-bold',
-    icon: '📁'
+    Icon: FolderGit2
   },
   LOCATION_USER: {
     label: 'Site / Location User',
     desc: 'Manages physical site barrier assets. Can add devices (cannot remove)',
     badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold',
-    icon: '📍'
+    Icon: MapPin
   },
   SITE_USER: {
     label: 'Site User',
     desc: 'Site monitoring staff. Can add devices (cannot remove)',
     badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold',
-    icon: '📍'
+    Icon: MapPin
   },
   ASSET_USER: {
     label: 'Asset Operator',
     desc: 'Assigned specific barrier fence/net. Can add devices (cannot remove)',
     badge: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold',
-    icon: '🛡️'
+    Icon: ShieldCheck
   },
   USER: {
     label: 'Standard Viewer',
     desc: 'Read-only viewer for telemetry and safety dashboards',
     badge: 'bg-slate-500/10 text-slate-400 border border-slate-500/30',
-    icon: '👤'
+    Icon: User
   }
 };
 
@@ -114,6 +116,13 @@ export default function UsersPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
+  const userOrgId = currentUser?.org_id || currentUser?.organizationId;
+  const currentOrgName =
+    currentUser?.organization?.name ||
+    orgs.find((o) => (o._id || o.id) === userOrgId)?.name ||
+    currentUser?.organizationName ||
+    'My Organization';
+
   function loadData() {
     setLoading(true);
     Promise.all([
@@ -141,13 +150,14 @@ export default function UsersPage() {
 
   const handleOpenAdd = () => {
     setEditingUser(null);
+    const defaultOrg = (!isSuperAdmin && userOrgId) ? userOrgId : (orgs[0]?._id || orgs[0]?.id || '');
     setForm({
       name: '',
       email: '',
       password: '',
       role: 'LOCATION_USER',
-      organizationId: currentUser?.org_id || orgs[0]?._id || orgs[0]?.id || '',
-      projectId: currentUser?.project_id || projects[0]?._id || projects[0]?.id || '',
+      organizationId: defaultOrg,
+      projectId: currentUser?.project_id || '',
       locationId: currentUser?.location_id || '',
       assignedAssets: [],
       phone: ''
@@ -158,12 +168,13 @@ export default function UsersPage() {
 
   const handleOpenEdit = (user) => {
     setEditingUser(user);
+    const userOrg = user.org_id || user.organizationId || user.organization?.id || (!isSuperAdmin ? userOrgId : '');
     setForm({
       name: user.name || '',
       email: user.email || '',
       password: '', // Leave empty unless changing
       role: user.role || 'USER',
-      organizationId: user.org_id || user.organizationId || user.organization?.id || '',
+      organizationId: userOrg,
       projectId: user.project_id || user.projectId || user.project?.id || '',
       locationId: user.location_id || user.locationId || user.location?.id || '',
       assignedAssets: Array.isArray(user.assigned_assets || user.assignedAssets) ? (user.assigned_assets || user.assignedAssets) : [],
@@ -179,6 +190,8 @@ export default function UsersPage() {
     setFormError('');
 
     try {
+      const targetOrg = (!isSuperAdmin && userOrgId) ? userOrgId : (form.organizationId || null);
+
       if (editingUser) {
         // Edit existing user
         const userId = editingUser.id || editingUser._id;
@@ -186,8 +199,8 @@ export default function UsersPage() {
           name: form.name,
           email: form.email,
           role: form.role,
-          organizationId: form.organizationId || null,
-          org_id: form.organizationId || null,
+          organizationId: targetOrg,
+          org_id: targetOrg,
           projectId: form.projectId || null,
           project_id: form.projectId || null,
           locationId: form.locationId || null,
@@ -207,8 +220,11 @@ export default function UsersPage() {
         }
         await api.users.create({
           ...form,
-          org_id: form.organizationId || null,
+          organizationId: targetOrg,
+          org_id: targetOrg,
+          projectId: form.projectId || null,
           project_id: form.projectId || null,
+          locationId: form.locationId || null,
           location_id: form.locationId || null,
           assigned_assets: form.assignedAssets || []
         });
@@ -239,8 +255,15 @@ export default function UsersPage() {
     }
   };
 
+  // Filter users: only users in current org if not Super Admin
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
+      // Organization restriction for non-Super Admin (e.g. ORG_ADMIN)
+      if (!isSuperAdmin && userOrgId) {
+        const uOrgId = u.org_id || u.organizationId || u.organization?.id;
+        if (uOrgId && uOrgId !== userOrgId) return false;
+      }
+
       const matchesSearch =
         (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -248,33 +271,55 @@ export default function UsersPage() {
       const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [users, searchQuery, roleFilter]);
+  }, [users, searchQuery, roleFilter, isSuperAdmin, userOrgId]);
+
+  // Available Organizations in dropdowns
+  const availableOrgs = useMemo(() => {
+    if (isSuperAdmin || !userOrgId) return orgs;
+    const orgMatches = orgs.filter(o => (o._id || o.id) === userOrgId);
+    if (orgMatches.length > 0) return orgMatches;
+    return [{ id: userOrgId, _id: userOrgId, name: currentOrgName }];
+  }, [orgs, isSuperAdmin, userOrgId, currentOrgName]);
 
   // Dependent dropdowns for form
   const availableProjects = useMemo(() => {
-    if (!form.organizationId) return projects;
-    return projects.filter(p => (p.org_id || p.organizationId) === form.organizationId);
-  }, [projects, form.organizationId]);
+    const targetOrgId = (!isSuperAdmin && userOrgId) ? userOrgId : form.organizationId;
+    if (!targetOrgId) return projects;
+    return projects.filter(p => (p.org_id || p.organizationId) === targetOrgId);
+  }, [projects, form.organizationId, isSuperAdmin, userOrgId]);
 
   const availableLocations = useMemo(() => {
+    const targetOrgId = (!isSuperAdmin && userOrgId) ? userOrgId : form.organizationId;
     if (form.projectId) {
       return locs.filter(l => (l.project_id || l.projectId) === form.projectId);
     }
-    if (form.organizationId) {
-      return locs.filter(l => (l.org_id || l.organizationId) === form.organizationId);
+    if (targetOrgId) {
+      return locs.filter(l => (l.org_id || l.organizationId) === targetOrgId);
     }
     return locs;
-  }, [locs, form.projectId, form.organizationId]);
+  }, [locs, form.projectId, form.organizationId, isSuperAdmin, userOrgId]);
 
   const availableAssets = useMemo(() => {
+    const targetOrgId = (!isSuperAdmin && userOrgId) ? userOrgId : form.organizationId;
     if (form.locationId) {
       return assets.filter(a => (a.location_id || a.locationId) === form.locationId);
     }
     if (form.projectId) {
       return assets.filter(a => (a.project_id || a.projectId) === form.projectId);
     }
+    if (targetOrgId) {
+      return assets.filter(a => (a.org_id || a.organizationId) === targetOrgId);
+    }
     return assets;
-  }, [assets, form.locationId, form.projectId]);
+  }, [assets, form.locationId, form.projectId, form.organizationId, isSuperAdmin, userOrgId]);
+
+  // Role filter buttons
+  const filterRoles = useMemo(() => {
+    const base = ['ALL'];
+    if (isSuperAdmin) base.push('SUPER_ADMIN');
+    base.push('ORG_ADMIN', 'PROJECT_USER', 'LOCATION_USER', 'ASSET_USER', 'USER');
+    return base;
+  }, [isSuperAdmin]);
 
   const inputCls =
     'w-full rounded-xl border border-border bg-surface-2 px-3.5 py-2.5 text-xs text-text outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500';
@@ -286,11 +331,21 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <Users className="w-7 h-7 text-indigo-500" /> User Role & Hierarchy Management
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <Users className="w-7 h-7 text-indigo-500" /> User Role & Hierarchy Management
+            </h1>
+            {!isSuperAdmin && userOrgId && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <Building2 className="w-3.5 h-3.5" />
+                {currentOrgName}
+              </span>
+            )}
+          </div>
           <p className="text-text-muted text-sm mt-1">
-            Configure access levels: Super Admin, Organization Admin, Project User (Device Add/Remove), Site User, and Asset Operators.
+            {!isSuperAdmin
+              ? `Manage and assign roles for users belonging to ${currentOrgName}.`
+              : 'Configure access levels: Super Admin, Organization Admin, Project User, Site User, and Asset Operators across all organizations.'}
           </p>
         </div>
         <button
@@ -317,7 +372,7 @@ export default function UsersPage() {
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           <span className="text-xs text-text-dim font-medium whitespace-nowrap">Filter Role:</span>
           <div className="flex items-center gap-1.5 flex-nowrap">
-            {['ALL', 'SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_USER', 'LOCATION_USER', 'ASSET_USER', 'USER'].map((r) => (
+            {filterRoles.map((r) => (
               <button
                 key={r}
                 type="button"
@@ -342,7 +397,7 @@ export default function UsersPage() {
           const orgName =
             u.organization?.name ||
             orgs.find((o) => (o._id || o.id) === (u.org_id || u.organizationId))?.name ||
-            'Global Access';
+            (!isSuperAdmin ? currentOrgName : 'Global Access');
           const prjName =
             u.project?.name ||
             projects.find((p) => (p._id || p.id) === (u.project_id || u.projectId))?.name;
@@ -357,8 +412,8 @@ export default function UsersPage() {
               className="bg-surface border border-border rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-500/30 transition shadow-sm"
             >
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center text-lg font-bold shrink-0">
-                  {roleData.icon}
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                  {roleData.Icon ? <roleData.Icon className="w-5 h-5" /> : <User className="w-5 h-5" />}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -379,7 +434,11 @@ export default function UsersPage() {
                   </div>
                   <p className="text-text-dim text-xs mt-0.5 flex items-center gap-1.5 truncate">
                     <Mail className="w-3.5 h-3.5 shrink-0" /> {u.email}
-                    {u.phone && <span className="text-text-muted">• 📞 {u.phone}</span>}
+                    {u.phone && (
+                      <span className="text-text-muted flex items-center gap-1">
+                        • <Phone className="w-3 h-3 text-text-dim" /> {u.phone}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -437,7 +496,11 @@ export default function UsersPage() {
           <div className="text-center py-16 bg-surface border border-border rounded-2xl">
             <Users className="w-10 h-10 text-text-dim mx-auto mb-2 opacity-50" />
             <p className="text-sm font-semibold text-text-muted">No users found</p>
-            <p className="text-xs text-text-dim mt-1">Try changing your search query or role filter.</p>
+            <p className="text-xs text-text-dim mt-1">
+              {!isSuperAdmin
+                ? `No users found for organization "${currentOrgName}".`
+                : 'Try changing your search query or role filter.'}
+            </p>
           </div>
         )}
       </div>
@@ -533,12 +596,14 @@ export default function UsersPage() {
                     onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
                     className={inputCls}
                   >
-                    <option value="SUPER_ADMIN">👑 SUPER_ADMIN — Global Administrator (All Orgs & Projects)</option>
-                    <option value="ORG_ADMIN">🏢 ORG_ADMIN — Organization Admin (All Projects & Sites in Org)</option>
-                    <option value="PROJECT_USER">📁 PROJECT_USER — Project Manager (Add & Remove Devices in Project)</option>
-                    <option value="LOCATION_USER">📍 LOCATION_USER — Site / Location User (Add Device Only)</option>
-                    <option value="ASSET_USER">🛡️ ASSET_USER — Barrier Asset Operator (Add Device Only)</option>
-                    <option value="USER">👤 USER — Read-Only Viewer</option>
+                    {isSuperAdmin && (
+                      <option value="SUPER_ADMIN">SUPER_ADMIN — Global Administrator (All Orgs & Projects)</option>
+                    )}
+                    <option value="ORG_ADMIN">ORG_ADMIN — Organization Admin (All Projects & Sites in Org)</option>
+                    <option value="PROJECT_USER">PROJECT_USER — Project Manager (Add & Remove Devices in Project)</option>
+                    <option value="LOCATION_USER">LOCATION_USER — Site / Location User (Add Device Only)</option>
+                    <option value="ASSET_USER">ASSET_USER — Barrier Asset Operator (Add Device Only)</option>
+                    <option value="USER">USER — Read-Only Viewer</option>
                   </select>
                   <p className="mt-1 text-[11px] text-text-dim">
                     {ROLE_INFO[form.role]?.desc}
@@ -550,18 +615,22 @@ export default function UsersPage() {
                   <label className="block text-xs font-semibold text-text-muted mb-1">Organization Scope</label>
                   <select
                     value={form.organizationId}
+                    disabled={!isSuperAdmin}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, organizationId: e.target.value, projectId: '', locationId: '' }))
                     }
-                    className={inputCls}
+                    className={`${inputCls} ${!isSuperAdmin ? 'opacity-70 cursor-not-allowed bg-surface-3' : ''}`}
                   >
-                    <option value="">Global / Unassigned</option>
-                    {orgs.map((o) => (
+                    {isSuperAdmin && <option value="">Global / Unassigned</option>}
+                    {availableOrgs.map((o) => (
                       <option key={o._id || o.id} value={o._id || o.id}>
                         {o.name}
                       </option>
                     ))}
                   </select>
+                  {!isSuperAdmin && (
+                    <p className="mt-0.5 text-[10px] text-text-dim">Locked to your organization</p>
+                  )}
                 </div>
 
                 <div>

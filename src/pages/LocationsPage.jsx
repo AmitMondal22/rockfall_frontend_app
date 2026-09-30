@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useTheme } from '../hooks/useTheme';
-import { Plus, MapPin, Cpu, Users, Trash2, ChevronRight, Search, Building2, Edit3, X, Mountain, ShieldCheck, Activity } from 'lucide-react';
+import { Plus, MapPin, Cpu, Users, Trash2, ChevronRight, Search, Building2, Edit3, X, Mountain, ShieldCheck, Activity, Shield } from 'lucide-react';
 import { PageListSkeleton } from '../components/Skeleton';
 import { BARRIER_STYLES } from './AddBarrierAssetPage';
 
@@ -308,7 +308,7 @@ export default function LocationsPage() {
                                                 <div key={aId} onClick={() => navigate(`/assets/${aId}`)}
                                                     className={`flex items-center justify-between p-3 rounded-xl border border-border/60 cursor-pointer transition ${isDark ? 'hover:bg-surface-3 hover:border-amber-500/40' : 'hover:bg-[#f5f5f5] hover:border-amber-500/40'}`}>
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <span className="text-base">{style.icon}</span>
+                                                        {style.Icon ? <style.Icon className="w-4 h-4 text-amber-500 shrink-0" /> : <Shield className="w-4 h-4 text-amber-500 shrink-0" />}
                                                         <div className="min-w-0">
                                                             <p className="text-xs font-semibold truncate text-text">{asset.name || aId}</p>
                                                             <p className="text-[10px] text-text-dim truncate">{style.name} · {specs.lengthM ? `${specs.lengthM}m span` : 'Line span'}</p>
@@ -339,7 +339,9 @@ export default function LocationsPage() {
                                                         <p className="text-[10px] text-text-dim">{u.email}</p>
                                                     </div>
                                                     <button onClick={() => handleAssignUser(uId, null)}
-                                                        className="text-text-dim hover:text-danger text-[10px]" title="Unassign user">✕</button>
+                                                        className="text-text-dim hover:text-danger p-1 rounded-lg hover:bg-surface-3 transition" title="Unassign user">
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
                                                 </div>
                                             );
                                         })}

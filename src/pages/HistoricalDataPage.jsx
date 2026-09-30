@@ -225,37 +225,37 @@ export default function HistoricalDataPage() {
                     <div className="space-y-1.5 text-xs">
                         {d.rockfall > 0 && (
                             <div className="flex items-center justify-between gap-3 text-rose-500">
-                                <span className="flex items-center gap-1.5 font-medium">🪨 Rockfall:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><Mountain className="w-3.5 h-3.5" /> Rockfall:</span>
                                 <b className="font-mono">{d.rockfall}</b>
                             </div>
                         )}
                         {d.motion > 0 && (
                             <div className="flex items-center justify-between gap-3 text-blue-500">
-                                <span className="flex items-center gap-1.5 font-medium">🔄 Motion:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><Move className="w-3.5 h-3.5" /> Motion:</span>
                                 <b className="font-mono">{d.motion}</b>
                             </div>
                         )}
                         {d.human > 0 && (
                             <div className="flex items-center justify-between gap-3 text-amber-500">
-                                <span className="flex items-center gap-1.5 font-medium">🚶 Human Activity:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><UserIcon className="w-3.5 h-3.5" /> Human Activity:</span>
                                 <b className="font-mono">{d.human}</b>
                             </div>
                         )}
                         {d.heartbeat > 0 && (
                             <div className="flex items-center justify-between gap-3 text-emerald-500">
-                                <span className="flex items-center gap-1.5 font-medium">💚 Heartbeat:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><Heart className="w-3.5 h-3.5" /> Heartbeat:</span>
                                 <b className="font-mono">{d.heartbeat}</b>
                             </div>
                         )}
                         {d.other > 0 && (
                             <div className="flex items-center justify-between gap-3 text-purple-500">
-                                <span className="flex items-center gap-1.5 font-medium">⚡ Telemetry:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><Zap className="w-3.5 h-3.5" /> Telemetry:</span>
                                 <b className="font-mono">{d.other}</b>
                             </div>
                         )}
                         {d.alerts > 0 && (
                             <div className="flex items-center justify-between gap-3 text-rose-400 pt-1 border-t border-border/30">
-                                <span className="flex items-center gap-1.5 font-medium">🚨 Triggered Alerts:</span>
+                                <span className="flex items-center gap-1.5 font-medium"><AlertTriangle className="w-3.5 h-3.5" /> Triggered Alerts:</span>
                                 <b className="font-mono">{d.alerts}</b>
                             </div>
                         )}

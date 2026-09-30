@@ -198,7 +198,11 @@ export default function OrgDashboardPage() {
                                                     <span>Signal: <b>{csqPct(d.csq) ?? '--'}</b></span>
                                                     <span>Peak G: <b>{d.lastEvent?.peak_g ?? '--'}</b></span>
                                                 </div>
-                                                {isAlert && <p style={{ marginTop: 6, color: '#ef4444', fontWeight: 600, fontSize: 11 }}>⚠️ ALERT ACTIVE</p>}
+                                                {isAlert && (
+                                                    <p style={{ marginTop: 6, color: '#ef4444', fontWeight: 600, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <AlertTriangle style={{ width: 13, height: 13 }} /> ALERT ACTIVE
+                                                    </p>
+                                                )}
                                                 <button onClick={() => navigate(`/devices/${encodeURIComponent(d._id)}`)} style={{ marginTop: 8, color: '#2563eb', fontSize: 11, textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none' }}>View Details →</button>
                                             </div>
                                         </Popup>

@@ -26,7 +26,8 @@ import {
   Waves,
   X,
   Zap,
-  Lock
+  Lock,
+  Shield
 } from 'lucide-react';
 import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -424,7 +425,7 @@ export default function AssetDetailsPage() {
               {asset?.id || id}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400">
-              <span>{barrierStyle.icon}</span>
+              {barrierStyle.Icon ? <barrierStyle.Icon className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
               <span>{barrierStyle.name}</span>
             </span>
             <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${statusTone(asset?.status)}`}>
@@ -619,13 +620,16 @@ export default function AssetDetailsPage() {
                     pathOptions={{ color: '#ffffff', fillColor: '#8b5cf6', fillOpacity: 1, weight: 2.5 }}
                   >
                     <Tooltip permanent direction="bottom" offset={[0, 8]}>
-                      <span style={{ fontSize: 9, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '1px 5px', borderRadius: 4 }}>
-                        📡 {dev.name || dev._id} ({Math.round(dev.posPct)}%)
+                      <span style={{ fontSize: 9, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '1px 5px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <Radio style={{ width: 10, height: 10 }} /> {dev.name || dev._id} ({Math.round(dev.posPct)}%)
                       </span>
                     </Tooltip>
                     <Popup>
                       <div style={{ color: '#111', fontSize: 12, minWidth: 160 }}>
-                        <strong>📡 {dev.name || dev._id}</strong>
+                        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Radio style={{ width: 12, height: 12, color: '#8b5cf6' }} />
+                          {dev.name || dev._id}
+                        </strong>
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>
                           Mounted at <b>{Math.round(dev.posPct)}%</b> along barrier line
                         </p>
@@ -662,7 +666,8 @@ export default function AssetDetailsPage() {
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border">
                 <span className="text-text-muted">Barrier Type</span>
                 <span className="font-semibold text-text flex items-center gap-1.5">
-                  {barrierStyle.icon} {barrierStyle.name}
+                  {barrierStyle.Icon ? <barrierStyle.Icon className="w-3.5 h-3.5 text-amber-500" /> : <Shield className="w-3.5 h-3.5 text-amber-500" />}
+                  <span>{barrierStyle.name}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border">
@@ -889,7 +894,10 @@ export default function AssetDetailsPage() {
                     {points.length >= 2 && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-[11px] text-text-muted">
-                          <span>📍 <b>Interactive Map Placement:</b> Click along the line to pick</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <b>Interactive Map Placement:</b> Click along the line to pick
+                          </span>
                           <span className="font-mono text-indigo-400 font-bold">
                             {currentMountPoint.lat ? `${currentMountPoint.lat.toFixed(5)}, ${currentMountPoint.lng.toFixed(5)}` : ''}
                           </span>

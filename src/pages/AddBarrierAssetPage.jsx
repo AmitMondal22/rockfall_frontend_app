@@ -16,10 +16,15 @@ import {
   ShieldCheck,
   Trash2,
   Plus,
-  RotateCcw,
   Cpu,
   Layers,
-  Edit3
+  Edit3,
+  Shield,
+  Grid,
+  Zap,
+  Boxes,
+  Radio,
+  X
 } from 'lucide-react';
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -139,7 +144,7 @@ export const BARRIER_STYLES = {
     glowColor: '#b45309',
     dashArray: '12, 6',
     weight: 6,
-    icon: '🛡️'
+    Icon: Shield
   },
   DRAPERY_NET: {
     name: 'Drapery Mesh / Wire Net',
@@ -147,7 +152,7 @@ export const BARRIER_STYLES = {
     glowColor: '#047857',
     dashArray: '6, 6',
     weight: 5,
-    icon: '🕸️'
+    Icon: Grid
   },
   ROCK_SHED: {
     name: 'Protective Rock Shed',
@@ -155,7 +160,7 @@ export const BARRIER_STYLES = {
     glowColor: '#334155',
     dashArray: null,
     weight: 8,
-    icon: '🏛️'
+    Icon: Building2
   },
   ATTENUATOR: {
     name: 'Attenuator System',
@@ -163,7 +168,7 @@ export const BARRIER_STYLES = {
     glowColor: '#4338ca',
     dashArray: '16, 4, 4, 4',
     weight: 6,
-    icon: '⚡'
+    Icon: Zap
   },
   EMBANKMENT: {
     name: 'Reinforced Embankment',
@@ -171,7 +176,7 @@ export const BARRIER_STYLES = {
     glowColor: '#9a3412',
     dashArray: null,
     weight: 9,
-    icon: '🧱'
+    Icon: Boxes
   }
 };
 
@@ -263,9 +268,9 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
                 <button
                   type="button"
                   onClick={() => onRemovePoint(index)}
-                  style={{ marginTop: 6, color: '#ef4444', fontSize: 11, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  style={{ marginTop: 6, color: '#ef4444', fontSize: 11, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}
                 >
-                  ✕ Remove this point
+                  <Trash2 style={{ width: 12, height: 12 }} /> Remove this point
                 </button>
               </div>
             </Popup>
@@ -287,13 +292,16 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
             pathOptions={{ color: '#ffffff', fillColor: '#8b5cf6', fillOpacity: 1, weight: 2.5 }}
           >
             <Tooltip permanent direction="bottom" offset={[0, 8]}>
-              <span style={{ fontSize: 9, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '1px 4px', borderRadius: 4 }}>
-                📡 {dev.name || dev.id} ({Math.round(posPct)}%)
+              <span style={{ fontSize: 9, fontWeight: 700, background: '#8b5cf6', color: '#fff', padding: '1px 5px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Radio style={{ width: 10, height: 10 }} /> {dev.name || dev.id} ({Math.round(posPct)}%)
               </span>
             </Tooltip>
             <Popup>
               <div style={{ color: '#111', fontSize: 12 }}>
-                <strong>📡 {dev.name || dev.id}</strong>
+                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Radio style={{ width: 12, height: 12, color: '#8b5cf6' }} />
+                  {dev.name || dev.id}
+                </strong>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>Mounted on barrier at {Math.round(posPct)}% position</p>
                 <p style={{ margin: '2px 0 0', fontFamily: 'monospace', fontSize: 11 }}>{devPt.lat.toFixed(6)}, {devPt.lng.toFixed(6)}</p>
               </div>
@@ -304,7 +312,7 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
 
       <div className="leaflet-bottom leaflet-left">
         <div className="leaflet-control rounded-xl border border-border bg-surface/95 px-3.5 py-2 text-xs font-medium text-text shadow-lg flex items-center gap-2">
-          <span className="text-base">{currentStyle.icon}</span>
+          {currentStyle.Icon ? <currentStyle.Icon className="w-4 h-4 text-amber-500" /> : <Shield className="w-4 h-4 text-amber-500" />}
           <span className="font-semibold text-xs">{currentStyle.name}</span>
           <span className="text-text-dim text-[11px]">({points.length} vertices plotted)</span>
         </div>

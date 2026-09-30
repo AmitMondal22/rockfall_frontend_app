@@ -77,15 +77,21 @@ export default function Sidebar({ onClose }) {
 
             {/* User */}
             <div className={`p-4 border-t ${isDark ? 'border-[#333]' : 'border-[#e0e0e0]'}`}>
-                <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? 'bg-[#222] text-white' : 'bg-[#e8e8e8] text-[#111]'}`}>{user?.name?.charAt(0) || 'U'}</div>
-                    <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-[#111]'}`}>{user?.name}</p>
-                        <p className={`text-xs truncate ${isDark ? 'text-[#666]' : 'text-[#999]'}`}>{user?.role?.replace('_', ' ')}</p>
+                <NavLink to="/settings" onClick={onClose} className={`flex items-center gap-3 mb-3 p-2 rounded-xl transition ${isDark ? 'hover:bg-[#222]' : 'hover:bg-[#f0f0f0]'}`}>
+                    <div className="relative">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm ${isDark ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-600 border border-indigo-200'}`}>
+                            {user?.name ? user.name.charAt(0).toUpperCase() : <Users className="w-4 h-4" />}
+                        </div>
                     </div>
-                </div>
-                <button onClick={logout} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${isDark ? 'text-[#999] hover:text-red-400 hover:bg-[#222]' : 'text-[#666] hover:text-red-500 hover:bg-[#f5f0f0]'}`}>
-                    <LogOut className="w-4 h-4" /> Logout
+                    <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-[#111]'}`}>{user?.name || 'Logged User'}</p>
+                        <p className={`text-[11px] truncate capitalize font-medium ${isDark ? 'text-[#888]' : 'text-[#666]'}`}>
+                            {user?.role ? user.role.toLowerCase().replace(/_/g, ' ') : 'Operator'}
+                        </p>
+                    </div>
+                </NavLink>
+                <button onClick={logout} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? 'text-[#999] hover:text-red-400 hover:bg-[#222]' : 'text-[#666] hover:text-red-500 hover:bg-[#f5f0f0]'}`}>
+                    <LogOut className="w-3.5 h-3.5" /> Log Out
                 </button>
             </div>
         </aside>

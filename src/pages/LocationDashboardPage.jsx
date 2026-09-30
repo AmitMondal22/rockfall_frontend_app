@@ -22,8 +22,6 @@ const csqPct = (v) => v != null && !isNaN(Number(v)) ? `${Math.min(Math.round((N
 const battPct = (v) => v != null && !isNaN(Number(v)) ? `${Math.max(0, Math.min(Math.round((Number(v) / 13) * 100), 100))}%` : '--';
 const eventColors = { ROCKFALL: '#ef4444', HUMAN_ACTIVITY: '#f59e0b', HUMAN: '#f59e0b', MOTION: '#3b82f6', HEARTBEAT: '#22c55e', OTHER: '#a855f7' };
 const eventIcons = { ROCKFALL: Mountain, HUMAN_ACTIVITY: Users, HUMAN: Users, MOTION: Move, HEARTBEAT: Heart, OTHER: Activity };
-
-const EVENT_EMOJIS = { ROCKFALL: '🪨', HUMAN_ACTIVITY: '🚶', HUMAN: '🚶', MOTION: '🔄', HEARTBEAT: '💚', OTHER: '⚡' };
 const EVENT_LABELS = { ROCKFALL: 'Rockfall', HUMAN_ACTIVITY: 'Human', HUMAN: 'Human', MOTION: 'Motion', HEARTBEAT: 'Heartbeat', OTHER: 'Telemetry' };
 
 export default function LocationDashboardPage() {
@@ -383,17 +381,23 @@ export default function LocationDashboardPage() {
                                                 <p className="text-[11px] text-gray-500 font-mono">{dId}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusBadge[d.status] || 'bg-slate-500/20 text-slate-400'}`}>{d.status}</span>
-                                                    <span className="text-[11px]">🔋 {battPct(d.battery)}</span>
+                                                    <span className="text-[11px] inline-flex items-center gap-1"><Battery className="w-3.5 h-3.5 text-emerald-500" /> {battPct(d.battery)}</span>
                                                 </div>
                                                 <div className="mt-1 text-[11px]">
                                                     <span>Signal: <b>{csqPct(d.csq)}</b></span>
                                                 </div>
-                                                {d.lastEvent && (
-                                                    <div style={{ marginTop: 6, padding: '4px 8px', borderRadius: 6, background: `${eventColors[evtType] || '#666'}15`, fontSize: 11 }}>
-                                                        <span style={{ color: eventColors[evtType] || '#666', fontWeight: 600 }}>{EVENT_EMOJIS[evtType] || '⚡'} {EVENT_LABELS[evtType] || 'Event'}</span>
-                                                        {d.lastEvent?.peak_g != null && <span style={{ marginLeft: 8 }}>Peak: <b>{parseFloat(d.lastEvent.peak_g).toFixed(3)}g</b></span>}
-                                                    </div>
-                                                )}
+                                                {d.lastEvent && (() => {
+                                                    const EvtIcon = eventIcons[evtType] || Activity;
+                                                    return (
+                                                        <div style={{ marginTop: 6, padding: '4px 8px', borderRadius: 6, background: `${eventColors[evtType] || '#666'}15`, fontSize: 11 }}>
+                                                            <span style={{ color: eventColors[evtType] || '#666', fontWeight: 600 }} className="inline-flex items-center gap-1">
+                                                                <EvtIcon className="w-3.5 h-3.5" />
+                                                                {EVENT_LABELS[evtType] || 'Event'}
+                                                            </span>
+                                                            {d.lastEvent?.peak_g != null && <span style={{ marginLeft: 8 }}>Peak: <b>{parseFloat(d.lastEvent.peak_g).toFixed(3)}g</b></span>}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <button onClick={() => navigate(`/devices/${encodeURIComponent(dId)}`)} style={{ marginTop: 8, color: '#2563eb', fontSize: 11, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}>View Device Dashboard →</button>
                                             </div>
                                         </Popup>

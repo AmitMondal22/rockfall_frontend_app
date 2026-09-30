@@ -1,6 +1,17 @@
 import React, { useEffect } from 'react';
+import { renderToString } from 'react-dom/server';
 import { useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import {
+  Mountain,
+  Users,
+  Move,
+  Heart,
+  Zap,
+  Radio,
+  AlertTriangle,
+  Activity
+} from 'lucide-react';
 
 /**
  * 100% Free Tile Providers — Completely Free, NO Watermarks, NO API Key Required!
@@ -74,18 +85,19 @@ export const STATUS_COLORS = {
   OFFLINE: '#94a3b8'
 };
 
-const EVENT_EMOJIS = {
-  ROCKFALL: '🪨',
-  HUMAN_ACTIVITY: '🚶',
-  HUMAN: '🚶',
-  MOTION: '🔄',
-  HEARTBEAT: '💚',
-  OTHER: '⚡'
+export const EVENT_REACT_ICONS = {
+  ROCKFALL: Mountain,
+  HUMAN_ACTIVITY: Users,
+  HUMAN: Users,
+  MOTION: Move,
+  HEARTBEAT: Heart,
+  ALERT: AlertTriangle,
+  OTHER: Zap
 };
 
 /**
- * Creates custom SVG/HTML divIcon for sensors and devices.
- * Avoids any missing PNG asset bugs.
+ * Creates custom SVG/HTML divIcon for sensors and devices using Lucide React icons.
+ * Zero string emojis, pure React vector icons.
  */
 export const createDeviceMarkerIcon = ({
   status = 'ONLINE',
@@ -95,18 +107,25 @@ export const createDeviceMarkerIcon = ({
   size = 32
 }) => {
   const color = STATUS_COLORS[status] || '#64748b';
-  const emoji = eventType && EVENT_EMOJIS[eventType] ? EVENT_EMOJIS[eventType] : '';
   const isAlert = status === 'ALERT';
   const iconSize = selected ? size + 10 : size;
   const half = Math.round(iconSize / 2);
 
   const pulseRing = (isAlert || selected)
-    ? `<div style="position:absolute;inset:-8px;border-radius:50%;background:${color};opacity:0.3;animation:subtlePulse 1.5s infinite;pointer-events:none;"></div>`
+    ? `<div style="position:absolute;inset:-8px;border-radius:50%;background:${color};opacity:0.35;animation:subtlePulse 1.5s infinite;pointer-events:none;"></div>`
     : '';
 
-  const innerContent = emoji
-    ? `<span style="font-size:${Math.round(iconSize * 0.42)}px;line-height:1;display:flex;align-items:center;justify-content:center;">${emoji}</span>`
-    : `<div style="width:${Math.round(iconSize * 0.4)}px;height:${Math.round(iconSize * 0.4)}px;border-radius:50%;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`;
+  const IconComponent = isAlert
+    ? AlertTriangle
+    : (eventType && EVENT_REACT_ICONS[eventType] ? EVENT_REACT_ICONS[eventType] : Radio);
+
+  const iconElement = React.createElement(IconComponent, {
+    size: Math.round(iconSize * 0.48),
+    color: '#ffffff',
+    strokeWidth: 2.2
+  });
+
+  const reactIconHtml = renderToString(iconElement);
 
   return L.divIcon({
     className: 'custom-sensor-marker',
@@ -129,7 +148,7 @@ export const createDeviceMarkerIcon = ({
           transition:transform 0.2s ease;
           ${selected ? 'transform: scale(1.15);' : ''}
         ">
-          ${innerContent}
+          ${reactIconHtml}
         </div>
       </div>
     `
