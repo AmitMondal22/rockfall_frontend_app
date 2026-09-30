@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { Plus, Building2, MapPin, Cpu, Users, Trash2, ChevronRight, Edit3, X } from 'lucide-react';
+import { Plus, Building2, MapPin, Cpu, Users, Trash2, ChevronRight, Edit3, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { PageListSkeleton } from '../components/Skeleton';
+import { resolveLogoUrl, getDefaultLogo } from '../utils/logoUtils';
 
 export default function OrganizationsPage() {
     const [orgs, setOrgs] = useState([]);
@@ -13,7 +14,11 @@ export default function OrganizationsPage() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editOrg, setEditOrg] = useState(null);
-    const [form, setForm] = useState({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '' });
+    const [form, setForm] = useState({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '', logo_url: '' });
+    const [logoPreview, setLogoPreview] = useState('');
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const fileInputRef = useRef(null);
+
     const { isSuperAdmin } = useAuth();
     const { resolvedTheme } = useTheme();
     const navigate = useNavigate();
@@ -38,36 +43,86 @@ export default function OrganizationsPage() {
 
     useEffect(() => { loadOrgs(); loadExtra(); }, []);
 
-    const resetForm = () => setForm({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '' });
+    const resetForm = () => {
+        setForm({ _id: '', name: '', address: '', contactEmail: '', contactPhone: '', location: '', logo_url: '' });
+        setLogoPreview('');
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file (PNG, JPG, WEBP, or SVG).');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image file size must be less than 5MB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result;
+            setLogoPreview(base64);
+            setForm(p => ({ ...p, logo_url: base64 }));
+        };
+        reader.readAsDataURL(file);
+    };
 
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
             await api.organizations.create(form);
-            setShowForm(false); resetForm(); loadOrgs();
-        } catch (err) { alert(err.message); }
+            setShowForm(false);
+            resetForm();
+            loadOrgs();
+        } catch (err) {
+            alert(err.message || 'Failed to create organization');
+        }
     };
 
     const handleEdit = (o, e) => {
         e.stopPropagation();
         setEditOrg(o._id || o.id);
         setShowForm(true);
-        setForm({ _id: o._id || o.id, name: o.name, address: o.address || '', contactEmail: o.contactEmail || '', contactPhone: o.contactPhone || '', location: o.location || '' });
+        const existingLogo = o.logo_url || o.logo || '';
+        setForm({
+            _id: o._id || o.id,
+            name: o.name,
+            address: o.address || '',
+            contactEmail: o.contactEmail || '',
+            contactPhone: o.contactPhone || '',
+            location: o.location || '',
+            logo_url: existingLogo
+        });
+        setLogoPreview(existingLogo ? resolveLogoUrl(existingLogo, isDark) : '');
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            const { name, address, contactEmail, contactPhone, location } = form;
-            await api.organizations.update(editOrg, { name, address, contactEmail, contactPhone, location });
-            setEditOrg(null); setShowForm(false); resetForm(); loadOrgs();
-        } catch (err) { alert(err.message); }
+            const { name, address, contactEmail, contactPhone, location, logo_url } = form;
+            await api.organizations.update(editOrg, { name, address, contactEmail, contactPhone, location, logo_url });
+            setEditOrg(null);
+            setShowForm(false);
+            resetForm();
+            loadOrgs();
+        } catch (err) {
+            alert(err.message || 'Failed to update organization');
+        }
     };
 
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!confirm('Deactivate this organization?')) return;
-        try { await api.organizations.remove(id); loadOrgs(); } catch (err) { alert(err.message); }
+        try {
+            await api.organizations.remove(id);
+            loadOrgs();
+        } catch (err) {
+            alert(err.message || 'Failed to delete organization');
+        }
     };
 
     const inputCls = `w-full px-3 py-2.5 bg-surface-2 border border-border rounded-xl text-sm focus:outline-none transition ${isDark ? 'text-white focus:border-white' : 'text-[#111] focus:border-[#111]'}`;
@@ -92,45 +147,113 @@ export default function OrganizationsPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <div><h1 className="text-2xl font-bold">Organizations</h1><p className="text-text-muted text-sm mt-1">{orgs.length} organizations</p></div>
+                <div>
+                    <h1 className="text-2xl font-bold">Organizations</h1>
+                    <p className="text-text-muted text-sm mt-1">{orgs.length} organizations managed</p>
+                </div>
                 {isSuperAdmin && (
-                    <button onClick={() => { setShowForm(!showForm); setEditOrg(null); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 ${btnCls}`}><Plus className="w-4 h-4" /> Add Organization</button>
+                    <button onClick={() => { setShowForm(!showForm); setEditOrg(null); resetForm(); }} className={`flex items-center gap-2 px-5 py-2.5 ${btnCls}`}>
+                        <Plus className="w-4 h-4" /> Add Organization
+                    </button>
                 )}
             </div>
 
-            {/* Create / Edit Form */}
+            {/* Create / Edit Form with Logo Upload */}
             {(showForm || editOrg) && (
-                <form onSubmit={editOrg ? handleUpdate : handleCreate} className="bg-surface border border-border rounded-2xl p-4 md:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">{editOrg ? 'Edit Organization' : 'New Organization'}</h3>
+                <form onSubmit={editOrg ? handleUpdate : handleCreate} className="bg-surface border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                        <h3 className="font-semibold text-base">{editOrg ? 'Edit Organization' : 'New Organization'}</h3>
                         <button type="button" onClick={() => { setShowForm(false); setEditOrg(null); resetForm(); }} className="p-1 hover:bg-surface-3 rounded-lg"><X className="w-4 h-4" /></button>
                     </div>
+
+                    {/* Logo Upload Section */}
+                    <div className="mb-6 p-4 rounded-xl border border-border/80 bg-surface-2/50 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-surface-3 border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                            {logoPreview ? (
+                                <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-contain p-1" />
+                            ) : (
+                                <Building2 className="w-8 h-8 text-text-dim" />
+                            )}
+                        </div>
+
+                        <div className="flex-1 text-center sm:text-left">
+                            <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1">Organization Logo</label>
+                            <p className="text-xs text-text-muted mb-3">Upload your corporate logo (PNG, JPG, SVG, max 5MB). It will appear on your login screen and user dashboard sidebar.</p>
+                            
+                            <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-3.5 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold hover:bg-surface-3 transition flex items-center gap-1.5"
+                                >
+                                    <Upload className="w-3.5 h-3.5" /> Select Image File
+                                </button>
+                                {logoPreview && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setLogoPreview(''); setForm(p => ({ ...p, logo_url: '' })); }}
+                                        className="px-3 py-1.5 rounded-xl text-xs text-danger hover:bg-danger/10 transition font-medium"
+                                    >
+                                        Remove Logo
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {formFields.map(f => (
-                            <div key={f.key}><label className="block text-xs text-text-muted mb-1.5">{f.label}</label>
-                                <input placeholder={f.ph} value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} required={!!f.required} disabled={f.disabled}
-                                    className={`${inputCls} ${f.disabled ? 'opacity-50 cursor-not-allowed' : ''}`} /></div>
+                            <div key={f.key}>
+                                <label className="block text-xs text-text-muted mb-1.5">{f.label}</label>
+                                <input
+                                    placeholder={f.ph}
+                                    value={form[f.key] || ''}
+                                    onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                                    required={!!f.required}
+                                    disabled={f.disabled}
+                                    className={`${inputCls} ${f.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                />
+                            </div>
                         ))}
                     </div>
-                    <div className="flex gap-3 justify-end mt-4">
+
+                    <div className="flex gap-3 justify-end mt-5 pt-3 border-t border-border">
                         <button type="button" onClick={() => { setShowForm(false); setEditOrg(null); resetForm(); }} className="px-5 py-2.5 text-sm text-text-muted border border-border rounded-xl hover:bg-surface-3 transition">Cancel</button>
-                        <button type="submit" className={`px-5 py-2.5 ${btnCls}`}>{editOrg ? 'Update' : 'Create'}</button>
+                        <button type="submit" className={`px-5 py-2.5 ${btnCls}`}>{editOrg ? 'Save Organization' : 'Create Organization'}</button>
                     </div>
                 </form>
             )}
 
+            {/* Organization Cards List */}
             <div className="grid gap-4">
                 {orgs.map(o => {
                     const dCount = getOrgDeviceCount(o._id);
                     const uCount = getOrgUserCount(o._id);
                     const online = getOrgOnline(o._id);
                     const alerts = getOrgAlerts(o._id);
+                    const orgLogo = o.logo_url || o.logo;
+
                     return (
                         <div key={o._id} onClick={() => navigate(`/organizations/${o._id}`)}
                             className="bg-surface border border-border rounded-2xl p-4 md:p-5 cursor-pointer hover:border-border-light transition group">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-5">
-                                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-surface-3 flex items-center justify-center shrink-0">
-                                    <Building2 className="w-6 h-6 md:w-7 md:h-7 text-text-muted" />
+                                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-surface-3 border border-border/50 flex items-center justify-center shrink-0 overflow-hidden p-1 shadow-sm">
+                                    {orgLogo ? (
+                                        <img
+                                            src={resolveLogoUrl(orgLogo, isDark)}
+                                            alt={o.name}
+                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'block'); }}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    ) : null}
+                                    <Building2 className={`w-6 h-6 md:w-7 md:h-7 text-text-muted ${orgLogo ? 'hidden' : 'block'}`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -161,7 +284,7 @@ export default function OrganizationsPage() {
                         </div>
                     );
                 })}
-                {orgs.length === 0 && <p className="text-center text-text-dim py-12">No organizations</p>}
+                {orgs.length === 0 && <p className="text-center text-text-dim py-12">No organizations registered yet</p>}
             </div>
         </div>
     );

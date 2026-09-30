@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { Shield, Loader2, Mountain, Activity, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import blackLogo from '../assets/black_logo.png';
-import whiteLogo from '../assets/white_logo.png';
+import { getDefaultLogo, resolveLogoUrl } from '../utils/logoUtils';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -13,10 +12,16 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [logoError, setLogoError] = useState(false);
     const { login } = useAuth();
     const { resolvedTheme } = useTheme();
     const navigate = useNavigate();
     const isDark = resolvedTheme === 'dark';
+
+    const cachedOrgLogo = typeof window !== 'undefined' ? localStorage.getItem('lastOrgLogo') : null;
+    const cachedOrgName = typeof window !== 'undefined' ? localStorage.getItem('lastOrgName') : null;
+    const defaultLogoImg = getDefaultLogo(isDark);
+    const logoSrc = (!logoError && cachedOrgLogo) ? resolveLogoUrl(cachedOrgLogo, isDark) : defaultLogoImg;
 
     useEffect(() => { setTimeout(() => setMounted(true), 50); }, []);
 
@@ -59,10 +64,22 @@ export default function LoginPage() {
                 {/* Main content */}
                 <div className={`relative z-10 max-w-lg px-12 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                     <div className="flex items-center gap-4 mb-8">
-                        <img src={isDark ? whiteLogo : blackLogo} alt="RockFall Logo" className="w-14 h-14 rounded-2xl object-contain" />
+                        <div className="w-14 h-14 rounded-2xl bg-surface-3 flex items-center justify-center p-1 border border-border/60 shadow-md overflow-hidden shrink-0">
+                            <img
+                                key={`${logoSrc}-${isDark}`}
+                                src={logoSrc}
+                                alt={cachedOrgName || "Logo"}
+                                onError={() => setLogoError(true)}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
                         <div>
-                            <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#111]'}`}>RockFall</h2>
-                            <p className={`text-sm ${isDark ? 'text-[#666]' : 'text-[#999]'}`}>Monitor</p>
+                            <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#111]'}`}>
+                                {cachedOrgName || 'RockFall'}
+                            </h2>
+                            <p className={`text-sm ${isDark ? 'text-[#666]' : 'text-[#999]'}`}>
+                                {cachedOrgName ? 'RockFall Monitoring' : 'Monitor'}
+                            </p>
                         </div>
                     </div>
 
@@ -100,8 +117,18 @@ export default function LoginPage() {
 
                     {/* Mobile logo */}
                     <div className="lg:hidden text-center mb-10">
-                        <img src={isDark ? whiteLogo : blackLogo} alt="RockFall Logo" className="inline-block w-16 h-16 rounded-2xl object-contain mb-5" />
-                        <h1 className={`text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#111]'}`}>RockFall Monitor</h1>
+                        <div className="inline-block w-16 h-16 rounded-2xl bg-surface-3 p-1.5 border border-border/60 shadow-md mb-4 overflow-hidden">
+                            <img
+                                key={`m-${logoSrc}-${isDark}`}
+                                src={logoSrc}
+                                alt={cachedOrgName || "Logo"}
+                                onError={() => setLogoError(true)}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <h1 className={`text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#111]'}`}>
+                            {cachedOrgName || 'RockFall Monitor'}
+                        </h1>
                         <p className={`mt-2 text-sm ${isDark ? 'text-[#666]' : 'text-[#999]'}`}>IoT Impact Monitoring Platform</p>
                     </div>
 

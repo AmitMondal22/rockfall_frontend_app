@@ -4,12 +4,32 @@ import { AuthContext } from './auth-context';
 
 const normalizeUser = (userData) => {
     if (!userData) return null;
+    const org = userData.organization || {};
+    const orgId = userData.organizationId || userData.org_id || org.id || org._id;
+    const orgName = userData.organizationName || org.name;
+    const orgLogo = userData.organizationLogo || org.logo_url || org.logo;
+
+    if (orgLogo) {
+        try { localStorage.setItem('lastOrgLogo', orgLogo); } catch (e) {}
+    }
+    if (orgName) {
+        try { localStorage.setItem('lastOrgName', orgName); } catch (e) {}
+    }
+
     return {
         ...userData,
         _id: userData._id || userData.id,
         id: userData.id || userData._id,
-        organizationId: userData.organizationId || userData.org_id,
-        org_id: userData.org_id || userData.organizationId
+        organizationId: orgId,
+        org_id: orgId,
+        organizationName: orgName,
+        organizationLogo: orgLogo,
+        organization: {
+            ...org,
+            id: orgId,
+            name: orgName,
+            logo_url: orgLogo
+        }
     };
 };
 

@@ -1,7 +1,9 @@
 import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { LayoutDashboard, Cpu, MapPin, Building2, Users, BarChart3, Settings, LogOut, Sun, Moon, Monitor, X, Package, FileText, ShieldAlert, FolderGit2 } from 'lucide-react';
+import { getDefaultLogo, resolveLogoUrl } from '../utils/logoUtils';
 import blackLogo from '../assets/black_logo.png';
 import whiteLogo from '../assets/white_logo.png';
 
@@ -28,17 +30,35 @@ const themeOptions = [
 export default function Sidebar({ onClose }) {
     const { user, logout } = useAuth();
     const { theme, resolvedTheme, setTheme } = useTheme();
+    const [logoError, setLogoError] = useState(false);
     const isDark = resolvedTheme === 'dark';
+
+    const rawOrgLogo = user?.organizationLogo || user?.organization?.logo_url || user?.organization?.logo;
+    const orgName = user?.organizationName || user?.organization?.name || user?.organizationId;
+    const defaultLogoImg = getDefaultLogo(isDark);
+    const displayLogo = (!logoError && rawOrgLogo) ? resolveLogoUrl(rawOrgLogo, isDark) : defaultLogoImg;
 
     return (
         <aside className={`h-full w-64 border-r flex flex-col ${isDark ? 'bg-[#111] border-[#333]' : 'bg-white border-[#e0e0e0]'}`}>
-            {/* Logo */}
-            <div className={`p-5 md:p-6 border-b ${isDark ? 'border-[#333]' : 'border-[#e0e0e0]'}`}>
+            {/* Logo & Organization Brand */}
+            <div className={`p-4 md:p-5 border-b ${isDark ? 'border-[#333]' : 'border-[#e0e0e0]'}`}>
                 <div className="flex items-center gap-3">
-                    <img src={isDark ? whiteLogo : blackLogo} alt="RockFall Logo" className="w-10 h-10 rounded-xl object-contain" />
-                    <div className="flex-1">
-                        <h1 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#111]'}`}>RockFall</h1>
-                        <p className={`text-xs ${isDark ? 'text-[#999]' : 'text-[#666]'}`}>Monitoring Platform</p>
+                    <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-surface-3 flex items-center justify-center shrink-0 border border-border/60 shadow-sm">
+                        <img
+                            key={`${displayLogo}-${isDark}`}
+                            src={displayLogo}
+                            alt={orgName || "RockFall Logo"}
+                            onError={() => setLogoError(true)}
+                            className="w-full h-full object-contain p-0.5"
+                        />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h1 className={`text-base font-bold tracking-tight truncate ${isDark ? 'text-white' : 'text-[#111]'}`}>
+                            {orgName || 'RockFall'}
+                        </h1>
+                        <p className={`text-[11px] truncate ${isDark ? 'text-[#999]' : 'text-[#666]'}`}>
+                            {orgName ? 'RockFall Platform' : 'Monitoring Platform'}
+                        </p>
                     </div>
                     {onClose && <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-surface-3 transition"><X className="w-5 h-5" /></button>}
                 </div>

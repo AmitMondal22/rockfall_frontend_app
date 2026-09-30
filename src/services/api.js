@@ -73,6 +73,10 @@ export const api = {
     },
     create: (data) => request('/organizations', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/organizations/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+    uploadLogo: (id, logoData) => request(id ? `/organizations/${encodeURIComponent(id)}/logo` : '/organizations/upload-logo', {
+      method: 'POST',
+      body: JSON.stringify(typeof logoData === 'string' ? { logo: logoData } : logoData)
+    }),
     remove: (id) => request(`/organizations/${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
   projects: {

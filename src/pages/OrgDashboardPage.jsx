@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import api from '../services/api';
 import wsService from '../services/websocket';
 import { OrgDashboardSkeleton } from '../components/Skeleton';
+import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { ArrowLeft, Building2, MapPin, Cpu, Users, Battery, Signal, AlertTriangle, Activity, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Building2, MapPin, Cpu, Users, Battery, Signal, AlertTriangle, Activity, ChevronRight, Upload, Camera } from 'lucide-react';
+import { resolveLogoUrl } from '../utils/logoUtils';
 import FreeMapLayerControl from '../components/FreeMapLayerControl';
 import {
     FREE_TILE_LAYERS,
@@ -87,6 +89,46 @@ export default function OrgDashboardPage() {
         };
     }, [fetchOrgData]);
 
+    const { isSuperAdmin, isOrgAdmin, user } = useAuth();
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const logoInputRef = useRef(null);
+
+    const canEditOrg = isSuperAdmin || (isOrgAdmin && String(user?.organizationId || user?.org_id) === String(id || org?._id || org?.id));
+
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file (PNG, JPG, WEBP, or SVG).');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image file size must be less than 5MB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const base64 = reader.result;
+            const orgIdToUpdate = org?._id || org?.id || id;
+            setUploadingLogo(true);
+            try {
+                const res = await api.organizations.uploadLogo(orgIdToUpdate, base64);
+                if (res.logo_url) {
+                    setOrg(prev => ({ ...prev, logo_url: res.logo_url }));
+                }
+                fetchOrgData();
+            } catch (err) {
+                alert(err.message || 'Failed to upload logo');
+            } finally {
+                setUploadingLogo(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
     if (!org) return <OrgDashboardSkeleton />;
 
     const onlineCount = devices.filter(d => d.status === 'ONLINE').length;
@@ -104,27 +146,73 @@ export default function OrgDashboardPage() {
         { label: 'Assigned Users', value: orgUsers.length, icon: Users, color: 'text-info' }
     ];
 
+    const orgLogoUrl = org.logo_url || org.logo;
+
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-4">
-                <button onClick={() => navigate('/organizations')} className="p-2.5 rounded-xl border border-border hover:bg-surface-3 transition">
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                    <Building2 className="w-6 h-6 text-indigo-500" />
+            {/* Header with Organization Logo */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/organizations')} className="p-2.5 rounded-xl border border-border hover:bg-surface-3 transition">
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+
+                    <div className="relative group">
+                        <div className="w-14 h-14 rounded-2xl bg-surface-3 border border-border/80 flex items-center justify-center shrink-0 overflow-hidden p-1 shadow-sm">
+                            {orgLogoUrl ? (
+                                <img
+                                    src={resolveLogoUrl(orgLogoUrl, isDark)}
+                                    alt={org.name}
+                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'block'); }}
+                                    className="w-full h-full object-contain"
+                                />
+                            ) : null}
+                            <Building2 className={`w-7 h-7 text-indigo-500 ${orgLogoUrl ? 'hidden' : 'block'}`} />
+                        </div>
+
+                        {canEditOrg && (
+                            <button
+                                type="button"
+                                onClick={() => logoInputRef.current?.click()}
+                                disabled={uploadingLogo}
+                                title="Upload Organization Logo"
+                                className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-md transition"
+                            >
+                                <Camera className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                        <input
+                            type="file"
+                            ref={logoInputRef}
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                        />
+                    </div>
+
+                    <div>
+                        <h1 className="text-2xl font-bold">{org.name}</h1>
+                        <p className="text-text-dim text-xs mt-0.5 flex items-center gap-2">
+                            {org.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{org.location}</span>}
+                            {org.contactEmail && <span>• {org.contactEmail}</span>}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold">{org.name}</h1>
-                    <p className="text-text-dim text-xs mt-0.5 flex items-center gap-2">
-                        {org.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{org.location}</span>}
-                        {org.contactEmail && <span>• {org.contactEmail}</span>}
-                    </p>
-                </div>
+
+                {canEditOrg && (
+                    <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl border border-border bg-surface hover:bg-surface-2 transition"
+                    >
+                        <Upload className="w-3.5 h-3.5" /> {uploadingLogo ? 'Uploading...' : (orgLogoUrl ? 'Change Logo' : 'Upload Logo')}
+                    </button>
+                )}
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {stats.map(s => (
                     <div key={s.label} className="bg-surface border border-border rounded-2xl p-4">
                         <div className="flex items-center justify-between mb-2">
