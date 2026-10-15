@@ -771,12 +771,12 @@ export default function DeviceDetailsPage() {
                         ['Device ID', device._id || device.id],
                         ['Sensor Name', device.name],
                         ['Mounted Barrier Asset', device.asset?.name || device.asset_id || device.assetId || 'Standalone Sensor'],
-                        ['Location (Site)', device.location || device.locationRef?.name || 'Site Location'],
-                        ['Parent Project', device.project?.name || 'Kuppavalasa Slope Stabilization Project'],
-                        ['Organization', device.organization?.name || device.organizationId || device.org_id],
-                        ['Latitude', device.lat ?? '18.272'],
-                        ['Longitude', device.lng ?? '83.078'],
-                        ['Description', device.description || 'Geotechnical rockfall & vibration monitoring node'],
+                        ['Location (Site)', device.location || device.locationRef?.name || 'Unassigned'],
+                        ['Parent Project', device.project?.name || 'Unassigned'],
+                        ['Organization', device.organization?.name || device.organizationId || device.org_id || '—'],
+                        ['Latitude', device.lat != null && device.lat !== '' ? String(device.lat) : '—'],
+                        ['Longitude', device.lng != null && device.lng !== '' ? String(device.lng) : '—'],
+                        ['Description', device.description || '—'],
                         ['Created', device.createdAt ? new Date(device.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A']
                     ].map(([label, value]) => (
                         <div key={label} className="py-2 border-b border-border/30">

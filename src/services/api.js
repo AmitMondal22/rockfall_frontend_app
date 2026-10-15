@@ -1,10 +1,12 @@
 const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
+  }
   const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
   if (envBaseUrl) {
     return `${envBaseUrl.replace(/\/$/, '')}/api`;
   }
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl && envUrl !== '/api' && !envUrl.includes('iotblitz.in')) return envUrl;
   if (typeof window !== 'undefined') {
     if (window.location.port === '5173' || window.location.port === '5174') {
       return `${window.location.protocol}//${window.location.hostname}:3000/api`;

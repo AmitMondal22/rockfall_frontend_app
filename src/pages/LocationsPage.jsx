@@ -180,15 +180,15 @@ export default function LocationsPage() {
                         {editLoc && (
                             <div><label className="block text-xs text-text-muted mb-1.5">Location ID (Auto-generated)</label><input value={form._id} disabled className={`${inputCls} opacity-50 cursor-not-allowed`} /></div>
                         )}
-                        <div><label className="block text-xs text-text-muted mb-1.5">Site / Location Name</label><input placeholder="e.g. Kuppavalasa North Slope" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className={inputCls} /></div>
+                        <div><label className="block text-xs text-text-muted mb-1.5">Site / Location Name</label><input placeholder="e.g. North Ridge Sector A" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required className={inputCls} /></div>
                         <div><label className="block text-xs text-text-muted mb-1.5">Organization</label>
                             <select value={form.organizationId} onChange={e => setForm(p => ({ ...p, organizationId: e.target.value }))} required className={inputCls}>
                                 <option value="">Select Organization</option>
                                 {orgs.map(o => <option key={o._id || o.id} value={o._id || o.id}>{o.name}</option>)}
                             </select></div>
-                        <div><label className="block text-xs text-text-muted mb-1.5">Address / Region</label><input placeholder="e.g. Kuppavalasa, Andhra Pradesh" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className={inputCls} /></div>
-                        <div><label className="block text-xs text-text-muted mb-1.5">Latitude</label><input type="number" step="any" placeholder="18.272" value={form.lat} onChange={e => setForm(p => ({ ...p, lat: e.target.value }))} className={inputCls} /></div>
-                        <div><label className="block text-xs text-text-muted mb-1.5">Longitude</label><input type="number" step="any" placeholder="83.078" value={form.lng} onChange={e => setForm(p => ({ ...p, lng: e.target.value }))} className={inputCls} /></div>
+                        <div><label className="block text-xs text-text-muted mb-1.5">Address / Region</label><input placeholder="e.g. Sector 4, Mountain Corridor" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className={inputCls} /></div>
+                        <div><label className="block text-xs text-text-muted mb-1.5">Latitude</label><input type="number" step="any" placeholder="e.g. 28.6139" value={form.lat} onChange={e => setForm(p => ({ ...p, lat: e.target.value }))} className={inputCls} /></div>
+                        <div><label className="block text-xs text-text-muted mb-1.5">Longitude</label><input type="number" step="any" placeholder="e.g. 77.2090" value={form.lng} onChange={e => setForm(p => ({ ...p, lng: e.target.value }))} className={inputCls} /></div>
                         <div className="sm:col-span-2 md:col-span-3"><label className="block text-xs text-text-muted mb-1.5">Description</label><input placeholder="Catch fence & drapery net monitoring site" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className={inputCls} /></div>
                     </div>
                     <div className="flex gap-3 justify-end mt-4">

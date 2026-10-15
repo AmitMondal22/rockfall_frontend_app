@@ -443,7 +443,7 @@ export default function ReportsPage() {
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-text">Rockfall Monitoring Platform</p>
-                <p className="text-[10px] text-text-dim">Kuppavalasa Site Verification</p>
+                <p className="text-[10px] text-text-dim">{report?.project?.name || report?.organization?.name || 'Telemetry Audit Record'}</p>
               </div>
               <ShieldCheck className="h-10 w-10 text-emerald-500 shrink-0" />
             </div>
@@ -508,7 +508,7 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <span className="text-text-dim text-[11px]">Monitoring Sites</span>
-                  <p className="font-bold text-sm mt-0.5 text-text">Kuppavalasa Active</p>
+                  <p className="font-bold text-sm mt-0.5 text-text">{summary.activeSites || (summary.locationsCount ? `${summary.locationsCount} Sites Active` : 'Active Monitoring')}</p>
                 </div>
               </div>
 

@@ -1,11 +1,14 @@
 const getWebSocketBaseUrl = () => {
   let configured = import.meta.env.VITE_WS_URL;
-  if (typeof window === 'undefined') return configured || 'ws://localhost:3310';
+  if (typeof window === 'undefined') return configured || 'ws://localhost:3000';
 
   const isHttps = window.location.protocol === 'https:';
   const defaultProtocol = isHttps ? 'wss:' : 'ws:';
 
   if (!configured || configured === '/ws') {
+    if (window.location.port === '5173' || window.location.port === '5174') {
+      return `${defaultProtocol}//${window.location.hostname}:3000`;
+    }
     return `${defaultProtocol}//${window.location.host}`;
   }
 

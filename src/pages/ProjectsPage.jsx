@@ -345,7 +345,7 @@ export default function ProjectsPage() {
                 <label className="block text-xs font-semibold text-text-muted mb-1">Project Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Kuppavalasa Slope Stabilization Project"
+                  placeholder="e.g. Slope Stabilization Project Phase 1"
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                   required
