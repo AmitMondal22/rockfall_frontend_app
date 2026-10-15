@@ -19,7 +19,14 @@ import {
   WifiOff,
   X,
   Zap,
-  Calendar
+  Calendar,
+  Mail,
+  Cpu,
+  CheckSquare,
+  Square,
+  SlidersHorizontal,
+  Activity,
+  Layers
 } from 'lucide-react';
 import { api } from '../services/api';
 import wsService from '../services/websocket';
@@ -27,8 +34,9 @@ import { useAuth } from '../hooks/useAuth';
 
 const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const STATUSES = ['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'];
-const ACTIONS = ['EMAIL', 'SMS', 'WHATSAPP'];
-const OPERATORS = ['>', '<', '>=', '<=', '==', '!='];
+const ACTIONS = ['EMAIL'];
+// const ACTIONS = ['EMAIL', 'SMS', 'WHATSAPP'];
+const OPERATORS = ['>=', '>', '<=', '<', '==', '!='];
 const TIME_RANGES = [
   { label: '24 Hours', value: '24h' },
   { label: '7 Days', value: '7d' },
@@ -38,16 +46,17 @@ const TIME_RANGES = [
 ];
 
 const FIELD_OPTIONS = [
-  { value: 'peak_g', label: 'Peak acceleration (G)' },
-  { value: 'duration_ms', label: 'Impact duration (ms)' },
-  { value: 'peaks', label: 'Detected peaks' },
-  { value: 'energy_g2', label: 'Impact energy (G²)' },
-  { value: 'mean_g', label: 'Mean acceleration (G)' },
-  { value: 'battery', label: 'Battery voltage (V)' },
-  { value: 'csq', label: 'Signal quality (CSQ)' },
-  { value: 'load_kn', label: 'Measured load (kN)' },
-  { value: 'loadCapacityPct', label: 'Rated load utilization (%)' },
+  { value: 'peak_g', label: 'Peak acceleration (G)', unit: 'G', defaultVal: '2.5', step: '0.1' },
+  { value: 'duration_ms', label: 'Impact duration (ms)', unit: 'ms', defaultVal: '120', step: '10' },
+  { value: 'peaks', label: 'Detected wave peaks', unit: 'peaks', defaultVal: '3', step: '1' },
+  { value: 'energy_g2', label: 'Impact energy (G²)', unit: 'G²', defaultVal: '6.0', step: '0.5' },
+  { value: 'mean_g', label: 'Mean acceleration (G)', unit: 'G', defaultVal: '1.0', step: '0.1' },
+  { value: 'battery', label: 'Battery voltage (V)', unit: 'V', defaultVal: '10.8', step: '0.1' },
+  { value: 'csq', label: 'Signal quality (CSQ 0-31)', unit: 'CSQ', defaultVal: '8', step: '1' },
+  { value: 'load_kn', label: 'Measured load (kN)', unit: 'kN', defaultVal: '50', step: '5' },
+  { value: 'loadCapacityPct', label: 'Rated load utilization (%)', unit: '%', defaultVal: '80', step: '5' },
 ];
+
 const EVENT_TYPES = [
   'ROCKFALL',
   'IMPACT',
@@ -57,44 +66,81 @@ const EVENT_TYPES = [
   'SENSOR_FAILURE',
   'HEARTBEAT',
 ];
+
 const RULE_TEMPLATES = [
   {
-    label: 'Critical impact',
+    label: 'Critical Rockfall (Force + Duration)',
+    match: 'AND',
     values: {
-      name: 'Critical impact threshold',
+      name: 'Critical Rockfall Multi-Sensor Threshold',
       severity: 'CRITICAL',
-      conditions: [{ field: 'peak_g', operator: '>=', value: '6' }],
-      actions: ['EMAIL', 'SMS'],
-    },
-  },
-  {
-    label: 'Low battery voltage',
-    values: {
-      name: 'Low battery voltage',
-      severity: 'MEDIUM',
-      conditions: [{ field: 'battery', operator: '<', value: '10.8' }],
+      conditionLogic: 'ALL',
+      conditions: [
+        { field: 'peak_g', operator: '>=', value: '2.5' },
+        { field: 'duration_ms', operator: '>=', value: '120' }
+      ],
       actions: ['EMAIL'],
     },
   },
   {
-    label: 'Barrier overload',
+    label: 'Extreme Impact or Barrier Overload',
+    match: 'OR',
     values: {
-      name: 'Barrier rated load warning',
+      name: 'High Impact or Barrier Strain Warning',
       severity: 'CRITICAL',
-      conditions: [{ field: 'loadCapacityPct', operator: '>=', value: '80' }],
-      actions: ['EMAIL', 'SMS'],
+      conditionLogic: 'ANY',
+      conditions: [
+        { field: 'peak_g', operator: '>=', value: '4.5' },
+        { field: 'loadCapacityPct', operator: '>=', value: '80' }
+      ],
+      actions: ['EMAIL'],
+    },
+  },
+  {
+    label: 'Prolonged High-Energy Impact',
+    match: 'AND',
+    values: {
+      name: 'Prolonged High Energy Impact Wave',
+      severity: 'CRITICAL',
+      conditionLogic: 'ALL',
+      conditions: [
+        { field: 'peak_g', operator: '>=', value: '2.0' },
+        { field: 'duration_ms', operator: '>=', value: '150' },
+        { field: 'energy_g2', operator: '>=', value: '8.0' }
+      ],
+      actions: ['EMAIL'],
+    },
+  },
+  {
+    label: 'Low Battery or Weak Cellular Signal',
+    match: 'OR',
+    values: {
+      name: 'Node Power & Connectivity Watchdog',
+      severity: 'MEDIUM',
+      conditionLogic: 'ANY',
+      conditions: [
+        { field: 'battery', operator: '<', value: '10.8' },
+        { field: 'csq', operator: '<=', value: '8' }
+      ],
+      actions: ['EMAIL'],
     },
   },
 ];
 
-const blankRuleForm = (organizationId = '') => ({
+const blankRuleForm = (organizationId = '', defaultEmail = '') => ({
   name: '',
   organizationId,
   deviceId: '',
+  deviceIds: [], // Empty array represents "All Devices"
+  emails: defaultEmail ? [defaultEmail] : [],
   eventType: '',
   severity: 'HIGH',
   isActive: true,
-  conditions: [{ field: 'peak_g', operator: '>', value: '' }],
+  conditionLogic: 'ALL', // 'ALL' = AND, 'ANY' = OR
+  conditions: [
+    { field: 'peak_g', operator: '>=', value: '2.0' },
+    { field: 'duration_ms', operator: '>=', value: '100' }
+  ],
   actions: ['EMAIL'],
 });
 
@@ -188,10 +234,13 @@ export default function AlertsPage() {
   const [mutatingAlert, setMutatingAlert] = useState('');
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState('');
-  const [ruleForm, setRuleForm] = useState(() => blankRuleForm(isAdmin ? '' : String(user?.organizationId || '')));
+  const [ruleForm, setRuleForm] = useState(() => blankRuleForm(isAdmin ? '' : String(user?.organizationId || ''), user?.email || ''));
   const [ruleFormError, setRuleFormError] = useState('');
   const [savingRule, setSavingRule] = useState(false);
   const [mutatingRule, setMutatingRule] = useState('');
+  const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
+  const [newEmailInput, setNewEmailInput] = useState('');
+  const [emailError, setEmailError] = useState('');
   const alertRequest = useRef(0);
   const ruleRequest = useRef(0);
 
@@ -379,36 +428,123 @@ export default function AlertsPage() {
     }
   };
 
+  const handleAddEmail = (rawInput) => {
+    const inputToAdd = rawInput !== undefined ? rawInput : newEmailInput;
+    if (!inputToAdd || !inputToAdd.trim()) return;
+    const splitEmails = String(inputToAdd).split(/[,;\s]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalid = splitEmails.find(e => !emailRegex.test(e));
+    if (invalid) {
+      setEmailError(`"${invalid}" is not a valid email address format.`);
+      return;
+    }
+    setEmailError('');
+    setRuleForm(current => {
+      const existing = current.emails || [];
+      const combined = [...existing];
+      splitEmails.forEach(e => {
+        if (!combined.includes(e)) combined.push(e);
+      });
+      return { ...current, emails: combined };
+    });
+    setNewEmailInput('');
+  };
+
+  const handleRemoveEmail = (emailToRemove) => {
+    setRuleForm(current => ({
+      ...current,
+      emails: (current.emails || []).filter(e => e !== emailToRemove)
+    }));
+  };
+
+  const handleToggleDevice = (devId) => {
+    const idStr = String(devId);
+    setRuleForm(current => {
+      const list = current.deviceIds || [];
+      const exists = list.includes(idStr);
+      const updated = exists ? list.filter(id => id !== idStr) : [...list, idStr];
+      return { ...current, deviceIds: updated };
+    });
+  };
+
+  const handleSelectAllDevices = () => {
+    setRuleForm(current => ({
+      ...current,
+      deviceIds: ruleDeviceOptions.map(d => String(d._id || d.id))
+    }));
+  };
+
+  const handleClearDevices = () => {
+    setRuleForm(current => ({
+      ...current,
+      deviceIds: [] // [] means All Devices
+    }));
+  };
+
   const resetRuleEditor = () => {
     setShowRuleForm(false);
     setEditingRuleId('');
-    setRuleForm(blankRuleForm(isAdmin ? '' : String(user?.organizationId || '')));
+    setRuleForm(blankRuleForm(isAdmin ? '' : String(user?.organizationId || ''), user?.email || ''));
     setRuleFormError('');
+    setNewEmailInput('');
+    setEmailError('');
+    setDeviceSearchQuery('');
   };
 
   const openNewRule = () => {
     setActiveTab('rules');
     setEditingRuleId('');
-    setRuleForm(blankRuleForm(isAdmin ? '' : String(user?.organizationId || '')));
+    setRuleForm(blankRuleForm(isAdmin ? '' : String(user?.organizationId || ''), user?.email || ''));
     setRuleFormError('');
+    setNewEmailInput('');
+    setEmailError('');
+    setDeviceSearchQuery('');
     setShowRuleForm(true);
   };
 
   const editRule = rule => {
+    const rawDevIds = Array.isArray(rule.deviceIds)
+      ? rule.deviceIds
+      : (Array.isArray(rule.device_ids)
+        ? rule.device_ids
+        : (rule.deviceId || rule.device_id ? [String(rule.deviceId || rule.device_id)] : []));
+
+    const rawEmails = Array.isArray(rule.recipientEmails)
+      ? rule.recipientEmails
+      : (Array.isArray(rule.recipient_emails)
+        ? rule.recipient_emails
+        : (Array.isArray(rule.emails) ? rule.emails : []));
+
+    const condLogic = String(rule.conditionLogic || rule.condition_logic || 'ALL').toUpperCase() === 'ANY' ? 'ANY' : 'ALL';
+    const rawConditions = Array.isArray(rule.conditions) && rule.conditions.length
+      ? rule.conditions.map(condition => ({
+        field: condition.field || 'peak_g',
+        operator: condition.operator || '>=',
+        value: String(condition.value ?? '')
+      }))
+      : [
+        { field: 'peak_g', operator: '>=', value: String(rule.min_peak_g ?? '2.0') },
+        { field: 'duration_ms', operator: '>=', value: String(rule.min_dur_ms ?? '100') }
+      ];
+
     setEditingRuleId(String(rule._id || rule.id));
     setRuleForm({
       name: rule.name || '',
       organizationId: String(rule.organizationId || rule.org_id || (isAdmin ? '' : user?.organizationId || '')),
-      deviceId: String(rule.deviceId || rule.device_id || ''),
+      deviceId: rawDevIds.length === 1 ? rawDevIds[0] : '',
+      deviceIds: rawDevIds,
+      emails: rawEmails,
       eventType: rule.eventType || rule.event_type || '',
       severity: rule.severity || 'HIGH',
       isActive: rule.isActive !== false && rule.enabled !== false,
-      conditions: Array.isArray(rule.conditions) && rule.conditions.length
-        ? rule.conditions.map(condition => ({ ...condition, value: String(condition.value ?? '') }))
-        : [{ field: 'peak_g', operator: '>', value: '' }],
-      actions: Array.isArray(rule.actions) ? rule.actions.filter(action => ACTIONS.includes(action)) : [],
+      conditionLogic: condLogic,
+      conditions: rawConditions,
+      actions: Array.isArray(rule.actions) && rule.actions.length ? rule.actions.filter(action => ACTIONS.includes(action)) : ['EMAIL'],
     });
     setRuleFormError('');
+    setNewEmailInput('');
+    setEmailError('');
+    setDeviceSearchQuery('');
     setShowRuleForm(true);
   };
 
@@ -427,6 +563,30 @@ export default function AlertsPage() {
     setRuleFormError('');
   };
 
+  const addCondition = (field = 'peak_g', operator = '>=', value = '') => {
+    const fieldDef = FIELD_OPTIONS.find(f => f.value === field);
+    const initialVal = value !== '' ? value : (fieldDef?.defaultVal || '2.0');
+    setRuleForm(current => ({
+      ...current,
+      conditions: [
+        ...current.conditions,
+        { field, operator, value: initialVal }
+      ]
+    }));
+    setRuleFormError('');
+  };
+
+  const removeCondition = index => {
+    setRuleForm(current => {
+      if (current.conditions.length <= 1) return current;
+      return {
+        ...current,
+        conditions: current.conditions.filter((_, i) => i !== index)
+      };
+    });
+    setRuleFormError('');
+  };
+
   const toggleAction = action => {
     setRuleForm(current => ({
       ...current,
@@ -440,9 +600,12 @@ export default function AlertsPage() {
     setRuleForm(current => ({
       ...current,
       ...template.values,
+      conditionLogic: template.values.conditionLogic || 'ALL',
+      conditions: (template.values.conditions || []).map(c => ({ ...c, value: String(c.value) })),
       organizationId: current.organizationId,
-      deviceId: current.deviceId,
-      eventType: '',
+      deviceIds: current.deviceIds || [],
+      emails: current.emails || [],
+      eventType: template.values.eventType || '',
       isActive: true,
     }));
     setRuleFormError('');
@@ -465,20 +628,42 @@ export default function AlertsPage() {
       operator: condition.operator,
       value: finiteNumber(condition.value),
     }));
-    if (conditions.some(condition => !FIELD_OPTIONS.some(field => field.value === condition.field)
-      || !OPERATORS.includes(condition.operator) || condition.value === null)) {
-      setRuleFormError('Every condition requires a supported signal, operator, and numeric value.');
+    if (conditions.length === 0) {
+      setRuleFormError('At least one trigger condition is required.');
       return;
     }
+    if (conditions.some(condition => !FIELD_OPTIONS.some(field => field.value === condition.field)
+      || !OPERATORS.includes(condition.operator) || condition.value === null)) {
+      setRuleFormError('Every condition requires a supported signal, operator, and valid numeric value.');
+      return;
+    }
+
+    // Auto-collect any typed email in newEmailInput that wasn't submitted via button/Enter
+    let finalEmails = [...(ruleForm.emails || [])];
+    if (newEmailInput.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const splitEmails = String(newEmailInput).split(/[,;\s]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
+      splitEmails.forEach(e => {
+        if (emailRegex.test(e) && !finalEmails.includes(e)) {
+          finalEmails.push(e);
+        }
+      });
+    }
+
     const payload = {
       name,
       organizationId: ruleForm.organizationId,
-      deviceId: ruleForm.deviceId || null,
+      deviceId: (ruleForm.deviceIds && ruleForm.deviceIds.length === 1) ? ruleForm.deviceIds[0] : null,
+      deviceIds: ruleForm.deviceIds || [],
+      recipientEmails: finalEmails,
+      emails: finalEmails,
       eventType: ruleForm.eventType || null,
       severity: ruleForm.severity,
       isActive: ruleForm.isActive,
+      conditionLogic: ruleForm.conditionLogic || 'ALL',
+      condition_logic: ruleForm.conditionLogic || 'ALL',
       conditions,
-      actions: ruleForm.actions,
+      actions: ruleForm.actions && ruleForm.actions.length ? ruleForm.actions : ['EMAIL'],
     };
 
     setSavingRule(true);
@@ -487,11 +672,11 @@ export default function AlertsPage() {
         const response = await api.alerts.updateRule(editingRuleId, payload);
         const updated = response.rule;
         setRules(current => current.map(item => ((String(item._id) === editingRuleId || String(item.id) === editingRuleId) ? updated : item)));
-        setNotice('Safety rule updated.');
+        setNotice('Safety rule updated successfully.');
       } else {
         const response = await api.alerts.createRule(payload);
         setRules(current => [response.rule, ...current]);
-        setNotice('Safety rule created.');
+        setNotice('Safety rule created successfully.');
       }
       resetRuleEditor();
     } catch (error) {
@@ -721,6 +906,32 @@ export default function AlertsPage() {
                 <button type="button" onClick={resetRuleEditor} className="p-2 rounded-xl border border-border hover:bg-surface-2"><X className="w-4 h-4" /></button>
               </div>
 
+              {/* Preset Multi-Condition Templates */}
+              {!editingRuleId && (
+                <div className="p-3 bg-surface-2 rounded-2xl border border-border space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-text-muted">
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Quick-Start Multi-Condition Templates:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {RULE_TEMPLATES.map(tpl => (
+                      <button
+                        key={tpl.label}
+                        type="button"
+                        onClick={() => applyTemplate(tpl)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface border border-border text-text hover:border-indigo-500/50 hover:text-indigo-400 transition shadow-sm"
+                      >
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${tpl.match === 'OR' ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/20 text-indigo-400'
+                          }`}>
+                          {tpl.match}
+                        </span>
+                        <span>{tpl.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {ruleFormError && <ErrorBanner title="Please check rule inputs" message={ruleFormError} />}
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -747,21 +958,99 @@ export default function AlertsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-semibold text-text-muted mb-1.5">Applies to Device</label>
-                  <select
-                    value={ruleForm.deviceId}
-                    onChange={e => setRuleField('deviceId', e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">All Organization Devices</option>
-                    {ruleDeviceOptions.map(d => (
-                      <option key={d._id || d.id} value={d._id || d.id}>{d.name || d._id || d.id}</option>
-                    ))}
-                  </select>
+              {/* Multi-Device Selection Section */}
+              <div className="space-y-3 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">
+                      Target Devices ({ruleForm.deviceIds.length === 0 ? 'All Organization Devices' : `${ruleForm.deviceIds.length} Selected`})
+                    </label>
+                    <p className="text-[11px] text-text-dim mt-0.5">Select specific IoT sensor nodes or monitor all devices.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleClearDevices}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${ruleForm.deviceIds.length === 0 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'border-border bg-surface-2 text-text-muted hover:text-text'}`}
+                    >
+                      All Devices
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllDevices}
+                      className="px-3 py-1.5 rounded-xl text-xs font-medium border border-border bg-surface-2 text-text-muted hover:text-text transition"
+                    >
+                      Select All ({ruleDeviceOptions.length})
+                    </button>
+                  </div>
                 </div>
 
+                {/* Selected Device Badges */}
+                {ruleForm.deviceIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 p-2.5 bg-surface-2 rounded-2xl border border-border max-h-24 overflow-y-auto">
+                    {ruleForm.deviceIds.map(devId => {
+                      const dObj = deviceIndex.get(devId);
+                      return (
+                        <span key={devId} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                          <Cpu className="w-3 h-3" />
+                          <span>{dObj?.name || devId}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDevice(devId)}
+                            className="hover:text-white transition"
+                            title="Remove device"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Search & Device Checkbox Grid */}
+                <div className="p-3 bg-surface-2/60 rounded-2xl border border-border space-y-2.5">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
+                    <input
+                      type="text"
+                      placeholder="Filter devices by name or hardware ID..."
+                      value={deviceSearchQuery}
+                      onChange={e => setDeviceSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-text placeholder:text-text-dim focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {ruleDeviceOptions
+                      .filter(d => {
+                        if (!deviceSearchQuery) return true;
+                        const q = deviceSearchQuery.toLowerCase();
+                        return (d.name && d.name.toLowerCase().includes(q)) || String(d._id || d.id).toLowerCase().includes(q);
+                      })
+                      .map(d => {
+                        const idStr = String(d._id || d.id);
+                        const isSelected = ruleForm.deviceIds.includes(idStr);
+                        return (
+                          <div
+                            key={idStr}
+                            onClick={() => handleToggleDevice(idStr)}
+                            className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition select-none ${isSelected ? 'bg-indigo-600/15 border-indigo-500/40 text-text font-medium' : 'bg-surface border-border text-text-muted hover:border-border-hover'}`}
+                          >
+                            {isSelected ? <CheckSquare className="w-4 h-4 text-indigo-500 shrink-0" /> : <Square className="w-4 h-4 text-text-dim shrink-0" />}
+                            <div className="truncate">
+                              <p className="truncate text-xs">{d.name || idStr}</p>
+                              <p className="text-[10px] text-text-dim font-mono truncate">{idStr}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Type & Status Controls */}
+              <div className="grid gap-4 sm:grid-cols-2 pt-1">
                 <div>
                   <label className="block text-xs font-semibold text-text-muted mb-1.5">Event Type Trigger</label>
                   <select
@@ -769,12 +1058,12 @@ export default function AlertsPage() {
                     onChange={e => setRuleField('eventType', e.target.value)}
                     className={inputClass}
                   >
-                    <option value="">Any Event Type</option>
+                    <option value="">Any Event Type (Default: Rockfall & Impacts)</option>
                     {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
 
-                <div className="flex items-center gap-3 pt-6">
+                <div className="flex items-center gap-3 pt-4 sm:pt-6">
                   <button
                     type="button"
                     onClick={() => setRuleField('isActive', !ruleForm.isActive)}
@@ -786,53 +1075,304 @@ export default function AlertsPage() {
                 </div>
               </div>
 
-              {/* Conditions Section */}
-              <div className="space-y-3 pt-2">
-                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Trigger Conditions</label>
-                {ruleForm.conditions.map((cond, idx) => (
-                  <div key={idx} className="flex flex-wrap items-center gap-2 sm:gap-3 p-3 bg-surface-2 rounded-2xl border border-border">
-                    <select
-                      value={cond.field}
-                      onChange={e => updateCondition(idx, 'field', e.target.value)}
-                      className="px-3 py-2 bg-surface border border-border rounded-xl text-xs text-text focus:outline-none"
-                    >
-                      {FIELD_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
-
-                    <select
-                      value={cond.operator}
-                      onChange={e => updateCondition(idx, 'operator', e.target.value)}
-                      className="px-3 py-2 bg-surface border border-border rounded-xl text-xs text-text focus:outline-none font-mono"
-                    >
-                      {OPERATORS.map(op => <option key={op} value={op}>{op}</option>)}
-                    </select>
-
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="Threshold Value"
-                      value={cond.value}
-                      onChange={e => updateCondition(idx, 'value', e.target.value)}
-                      className="px-3 py-2 bg-surface border border-border rounded-xl text-xs text-text focus:outline-none flex-1 min-w-[120px]"
-                      required
-                    />
-
-                    {ruleForm.conditions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setRuleForm(c => ({ ...c, conditions: c.conditions.filter((_, i) => i !== idx) }))}
-                        className="p-2 text-danger hover:bg-surface rounded-xl"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+              {/* Trigger Conditions Section */}
+              <div className="space-y-4 pt-2 p-4 sm:p-5 bg-surface-2 rounded-2xl border border-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                      <label className="text-xs font-bold text-text uppercase tracking-wider">
+                        Trigger Conditions ({ruleForm.conditions.length})
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-text-dim mt-0.5">
+                      Configure multi-parameter telemetry rules. Specify whether incoming data must match all or any condition.
+                    </p>
                   </div>
-                ))}
+
+                  {/* Match Logic Selector (ALL / AND vs ANY / OR) */}
+                  <div className="flex items-center p-1 bg-surface border border-border rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setRuleField('conditionLogic', 'ALL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${ruleForm.conditionLogic !== 'ANY'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-text-muted hover:text-text'
+                        }`}
+                    >
+                      <span>Match ALL</span>
+                      <span className="text-[10px] px-1 py-0.2 rounded bg-black/20 font-mono">AND</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRuleField('conditionLogic', 'ANY')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${ruleForm.conditionLogic === 'ANY'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'text-text-muted hover:text-text'
+                        }`}
+                    >
+                      <span>Match ANY</span>
+                      <span className="text-[10px] px-1 py-0.2 rounded bg-black/20 font-mono">OR</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Match Mode Explanation Banner */}
+                <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${ruleForm.conditionLogic === 'ANY'
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                    : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'
+                  }`}>
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {ruleForm.conditionLogic === 'ANY'
+                      ? 'OR Logic Active: The alert triggers if ANY single condition below is met.'
+                      : 'AND Logic Active: The alert triggers only if ALL conditions below are simultaneously met.'}
+                  </span>
+                </div>
+
+                {/* Condition Rows List */}
+                <div className="space-y-2.5">
+                  {ruleForm.conditions.map((cond, idx) => {
+                    const selectedField = FIELD_OPTIONS.find(f => f.value === cond.field) || FIELD_OPTIONS[0];
+                    const isAnd = ruleForm.conditionLogic !== 'ANY';
+                    return (
+                      <div key={idx} className="space-y-2">
+                        {idx > 0 && (
+                          <div className="flex items-center justify-center my-1">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border shadow-sm ${isAnd
+                                ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              }`}>
+                              {isAnd ? 'AND' : 'OR'}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="p-3 bg-surface rounded-xl border border-border flex flex-wrap items-center gap-2 sm:gap-3 transition hover:border-border/80">
+                          <span className="w-6 h-6 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-[10px] font-bold text-text-muted shrink-0">
+                            #{idx + 1}
+                          </span>
+
+                          {/* Field Selector */}
+                          <div className="flex-1 min-w-[180px]">
+                            <select
+                              value={cond.field}
+                              onChange={e => {
+                                const newField = e.target.value;
+                                const fieldMeta = FIELD_OPTIONS.find(f => f.value === newField);
+                                updateCondition(idx, 'field', newField);
+                                if (!cond.value && fieldMeta) {
+                                  updateCondition(idx, 'value', fieldMeta.defaultVal || '1.0');
+                                }
+                              }}
+                              className="w-full px-3 py-2 bg-surface-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-indigo-500"
+                            >
+                              {FIELD_OPTIONS.map(f => (
+                                <option key={f.value} value={f.value}>
+                                  {f.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Operator Selector */}
+                          <div className="w-24 shrink-0">
+                            <select
+                              value={cond.operator}
+                              onChange={e => updateCondition(idx, 'operator', e.target.value)}
+                              className="w-full px-3 py-2 bg-surface-2 border border-border rounded-xl text-xs text-text font-mono font-bold text-center focus:outline-none focus:border-indigo-500"
+                            >
+                              {OPERATORS.map(op => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Numeric Value Input with Unit Badge */}
+                          <div className="relative flex-1 min-w-[130px]">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder={`Value in ${selectedField?.unit || ''}`}
+                              value={cond.value}
+                              onChange={e => updateCondition(idx, 'value', e.target.value)}
+                              className="w-full pl-3 pr-12 py-2 bg-surface-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-indigo-500 font-mono"
+                              required
+                            />
+                            {selectedField?.unit && (
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-text-dim px-1.5 py-0.5 rounded bg-surface border border-border pointer-events-none">
+                                {selectedField.unit}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Remove Condition Button */}
+                          <button
+                            type="button"
+                            onClick={() => removeCondition(idx)}
+                            disabled={ruleForm.conditions.length <= 1}
+                            className="p-2 text-text-dim hover:text-danger hover:bg-surface-2 rounded-xl disabled:opacity-30 disabled:pointer-events-none transition"
+                            title={ruleForm.conditions.length <= 1 ? 'At least one condition required' : 'Remove condition'}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add Condition Buttons and Quick Signal Chips */}
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => addCondition()}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/25 text-xs font-semibold transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Trigger Condition</span>
+                  </button>
+
+                  {/* Quick Add Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-text-dim mr-1">Quick Add:</span>
+                    <button
+                      type="button"
+                      onClick={() => addCondition('peak_g', '>=', '2.5')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-surface border border-border text-text-muted hover:text-text hover:border-indigo-500/40 transition"
+                    >
+                      + Force (G)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addCondition('duration_ms', '>=', '150')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-surface border border-border text-text-muted hover:text-text hover:border-indigo-500/40 transition"
+                    >
+                      + Duration (ms)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addCondition('energy_g2', '>=', '8.0')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-surface border border-border text-text-muted hover:text-text hover:border-indigo-500/40 transition"
+                    >
+                      + Energy (G²)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addCondition('battery', '<', '10.8')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-surface border border-border text-text-muted hover:text-text hover:border-indigo-500/40 transition"
+                    >
+                      + Battery (V)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addCondition('csq', '<=', '8')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-surface border border-border text-text-muted hover:text-text hover:border-indigo-500/40 transition"
+                    >
+                      + Signal (CSQ)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Plain-English Live Preview Box */}
+                <div className="p-3 bg-surface rounded-xl border border-border text-xs text-text-muted flex items-start gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-text">Live Rule Preview: </span>
+                    <span>An incident will generate if </span>
+                    <span className="font-medium text-text">
+                      {ruleForm.conditions
+                        .map(c => {
+                          const f = FIELD_OPTIONS.find(opt => opt.value === c.field);
+                          return `[${f?.label.split(' (')[0] || c.field} ${c.operator} ${c.value || '?'} ${f?.unit || ''}]`;
+                        })
+                        .join(ruleForm.conditionLogic === 'ANY' ? ' OR ' : ' AND ')}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Actions Section */}
-              <div className="space-y-2 pt-2">
-                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Notification Actions</label>
+              {/* Multiple Alert Email Recipients Section */}
+              <div className="space-y-3 pt-2 p-4 bg-surface-2 rounded-2xl border border-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-indigo-400" />
+                    <label className="text-xs font-bold text-text uppercase tracking-wider">
+                      Alert Email Recipients ({ruleForm.emails.length})
+                    </label>
+                  </div>
+                  {user?.email && !ruleForm.emails.includes(user.email.toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddEmail(user.email)}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition"
+                    >
+                      + Add My Email ({user.email})
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-text-dim">
+                  When a rockfall or sensor telemetry event triggers this rule, high-priority emergency alert emails will be automatically dispatched to all recipients below.
+                </p>
+
+                {/* Email Badges */}
+                {ruleForm.emails.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {ruleForm.emails.map(email => (
+                      <span key={email} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium bg-surface border border-border text-text shadow-sm">
+                        <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>{email}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEmail(email)}
+                          className="hover:text-danger text-text-dim transition ml-0.5"
+                          title="Remove email"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-text-dim italic bg-surface/50 p-2.5 rounded-xl border border-dashed border-border">
+                    No custom email recipients added yet. (System fallback email will be used). Add emails below:
+                  </div>
+                )}
+
+                {/* Add Email Input */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
+                    <input
+                      type="email"
+                      placeholder="Add recipient email (e.g. safety.officer@mine.com, geotechnical@corridor.gov)"
+                      value={newEmailInput}
+                      onChange={e => { setNewEmailInput(e.target.value); setEmailError(''); }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddEmail();
+                        }
+                      }}
+                      className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-xl text-xs text-text placeholder:text-text-dim focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddEmail()}
+                    className="px-4 py-2 bg-surface border border-border hover:bg-surface-3 text-xs font-semibold rounded-xl text-text transition shrink-0"
+                  >
+                    + Add Email
+                  </button>
+                </div>
+                {emailError && <p className="text-xs text-danger">{emailError}</p>}
+              </div>
+
+              {/* Notification Channels Selection */}
+              <div className="space-y-2 pt-1">
+                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Additional Notification Channels</label>
                 <div className="flex flex-wrap gap-2">
                   {ACTIONS.map(action => (
                     <button
@@ -878,21 +1418,101 @@ export default function AlertsPage() {
                 const id = String(rule._id || rule.id);
                 const isBusy = mutatingRule.endsWith(`:${id}`);
                 const isEnabled = rule.isActive !== false && rule.enabled !== false;
-                const dev = deviceIndex.get(String(rule.deviceId || rule.device_id));
+                const devIds = Array.isArray(rule.deviceIds) && rule.deviceIds.length
+                  ? rule.deviceIds
+                  : (Array.isArray(rule.device_ids) && rule.device_ids.length
+                    ? rule.device_ids
+                    : (rule.deviceId || rule.device_id ? [String(rule.deviceId || rule.device_id)] : []));
+
+                const ruleEmails = Array.isArray(rule.recipientEmails) && rule.recipientEmails.length
+                  ? rule.recipientEmails
+                  : (Array.isArray(rule.recipient_emails) && rule.recipient_emails.length
+                    ? rule.recipient_emails
+                    : (Array.isArray(rule.emails) && rule.emails.length ? rule.emails : []));
 
                 return (
                   <article key={id} className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${severityTone(rule.severity)}`}>{rule.severity || 'CRITICAL'}</span>
                         <h3 className="font-semibold text-base">{rule.name}</h3>
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${isEnabled ? 'bg-emerald-500/10 text-success' : 'bg-surface-2 text-text-dim'}`}>{isEnabled ? 'ACTIVE' : 'PAUSED'}</span>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted mt-1">
-                        <span>Event: <strong className="text-text">{rule.eventType || rule.event_type || 'ANY'}</strong></span>
-                        <span>Device: <strong className="text-text">{dev?.name || rule.deviceId || rule.device_id || 'All Devices'}</strong></span>
-                        <span>Peak G: <strong className="text-text">&gt;= {rule.min_peak_g ?? '--'} G</strong></span>
-                        <span>Duration: <strong className="text-text">&gt;= {rule.min_dur_ms ?? '--'} ms</strong></span>
+
+                      {/* Telemetry trigger summary with multi-conditions */}
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          <span className="text-[11px] font-semibold text-text-dim uppercase tracking-wider">Evaluation:</span>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${(rule.conditionLogic || rule.condition_logic) === 'ANY'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                            }`}>
+                            {(rule.conditionLogic || rule.condition_logic) === 'ANY' ? 'MATCH ANY (OR)' : 'MATCH ALL (AND)'}
+                          </span>
+                          {(rule.eventType || rule.event_type) && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-surface-2 text-text-muted border border-border">
+                              Event: {rule.eventType || rule.event_type}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Condition Badges */}
+                        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                          {Array.isArray(rule.conditions) && rule.conditions.length > 0 ? (
+                            rule.conditions.map((c, cIdx) => {
+                              const fMeta = FIELD_OPTIONS.find(f => f.value === c.field);
+                              const isOr = (rule.conditionLogic || rule.condition_logic) === 'ANY';
+                              return (
+                                <div key={cIdx} className="flex items-center gap-1.5">
+                                  {cIdx > 0 && (
+                                    <span className={`text-[10px] font-bold ${isOr ? 'text-amber-400' : 'text-indigo-400'}`}>
+                                      {isOr ? 'OR' : 'AND'}
+                                    </span>
+                                  )}
+                                  <span className="px-2 py-0.5 rounded-lg bg-surface-2 border border-border text-text font-mono text-[11px]">
+                                    <strong className="text-text font-semibold">{fMeta?.label.split(' (')[0] || c.field}</strong> {c.operator} {c.value} {fMeta?.unit || ''}
+                                  </span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-lg bg-surface-2 border border-border text-text font-mono text-[11px]">
+                              Peak Force &gt;= {rule.min_peak_g ?? 1.5} G AND Duration &gt;= {rule.min_dur_ms ?? 100} ms
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Multiple Devices display */}
+                      <div className="flex items-center gap-1.5 flex-wrap text-xs text-text-muted">
+                        <span className="font-medium text-text-dim flex items-center gap-1"><Cpu className="w-3.5 h-3.5" /> Devices:</span>
+                        {devIds.length === 0 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-surface-2 text-text text-[11px] font-medium border border-border">All Organization Devices</span>
+                        ) : (
+                          devIds.map(dId => {
+                            const dObj = deviceIndex.get(dId);
+                            return (
+                              <span key={dId} className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 text-[11px] font-medium border border-indigo-500/20">
+                                {dObj?.name || dId}
+                              </span>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Multiple Alert Emails display */}
+                      <div className="flex items-center gap-1.5 flex-wrap text-xs text-text-muted">
+                        <span className="font-medium text-text-dim flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> Alert Emails:</span>
+                        {ruleEmails.length === 0 ? (
+                          <span className="px-2 py-0.5 rounded-md bg-surface-2 text-text-dim text-[11px] italic">System Default Recipient</span>
+                        ) : (
+                          ruleEmails.map(email => (
+                            <span key={email} className="px-2 py-0.5 rounded-md bg-surface-2 text-text text-[11px] font-medium border border-border flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              {email}
+                            </span>
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-auto">
