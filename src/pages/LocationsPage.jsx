@@ -290,11 +290,11 @@ export default function LocationsPage() {
                                 </div>
                             )}
 
-                            {/* Deployed Barrier Assets under this Location */}
+                            {/* Deployed Assets under this Location */}
                             {locAssets.length > 0 && (
                                 <div className="border-t border-border/30">
                                     <div className="px-5 py-2 flex items-center justify-between text-[10px] text-text-dim uppercase tracking-wider font-medium">
-                                        <span className="flex items-center gap-1.5"><Mountain className="w-3 h-3 text-amber-500" /> Deployed Barrier Assets ({locAssets.length})</span>
+                                        <span className="flex items-center gap-1.5"><Mountain className="w-3 h-3 text-amber-500" /> Deployed Assets ({locAssets.length})</span>
                                         <button onClick={() => navigate('/assets')} className="text-indigo-400 font-semibold hover:underline">View All Barriers →</button>
                                     </div>
                                     <div className="px-4 md:px-5 pb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">

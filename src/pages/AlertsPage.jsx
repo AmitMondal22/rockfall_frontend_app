@@ -83,10 +83,10 @@ const RULE_TEMPLATES = [
     },
   },
   {
-    label: 'Extreme Impact or Barrier Overload',
+    label: 'Extreme Impact or Asset Overload',
     match: 'OR',
     values: {
-      name: 'High Impact or Barrier Strain Warning',
+      name: 'High Impact or Asset Strain Warning',
       severity: 'CRITICAL',
       conditionLogic: 'ANY',
       conditions: [
@@ -1096,8 +1096,8 @@ export default function AlertsPage() {
                       type="button"
                       onClick={() => setRuleField('conditionLogic', 'ALL')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${ruleForm.conditionLogic !== 'ANY'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-text-muted hover:text-text'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-text-muted hover:text-text'
                         }`}
                     >
                       <span>Match ALL</span>
@@ -1107,8 +1107,8 @@ export default function AlertsPage() {
                       type="button"
                       onClick={() => setRuleField('conditionLogic', 'ANY')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${ruleForm.conditionLogic === 'ANY'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-text-muted hover:text-text'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-text-muted hover:text-text'
                         }`}
                     >
                       <span>Match ANY</span>
@@ -1119,8 +1119,8 @@ export default function AlertsPage() {
 
                 {/* Match Mode Explanation Banner */}
                 <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${ruleForm.conditionLogic === 'ANY'
-                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                    : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                  : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'
                   }`}>
                   <Zap className="w-3.5 h-3.5 shrink-0" />
                   <span>
@@ -1140,8 +1140,8 @@ export default function AlertsPage() {
                         {idx > 0 && (
                           <div className="flex items-center justify-center my-1">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border shadow-sm ${isAnd
-                                ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                              : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                               }`}>
                               {isAnd ? 'AND' : 'OR'}
                             </span>
@@ -1444,8 +1444,8 @@ export default function AlertsPage() {
                         <div className="flex items-center gap-2 flex-wrap text-xs">
                           <span className="text-[11px] font-semibold text-text-dim uppercase tracking-wider">Evaluation:</span>
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${(rule.conditionLogic || rule.condition_logic) === 'ANY'
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
                             }`}>
                             {(rule.conditionLogic || rule.condition_logic) === 'ANY' ? 'MATCH ANY (OR)' : 'MATCH ALL (AND)'}
                           </span>

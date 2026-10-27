@@ -770,7 +770,7 @@ export default function DeviceDetailsPage() {
                     {[
                         ['Device ID', device._id || device.id],
                         ['Sensor Name', device.name],
-                        ['Mounted Barrier Asset', device.asset?.name || device.asset_id || device.assetId || 'Standalone Sensor'],
+                        ['Mounted Asset', device.asset?.name || device.asset_id || device.assetId || 'Standalone Sensor'],
                         ['Location (Site)', device.location || device.locationRef?.name || 'Unassigned'],
                         ['Parent Project', device.project?.name || 'Unassigned'],
                         ['Organization', device.organization?.name || device.organizationId || device.org_id || '—'],

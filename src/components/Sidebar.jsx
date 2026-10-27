@@ -12,7 +12,7 @@ const navItems = [
     { to: '/organizations', icon: Building2, label: 'Organizations', roles: ['SUPER_ADMIN'] },
     { to: '/projects', icon: FolderGit2, label: 'Projects', roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER'] },
     { to: '/locations', icon: MapPin, label: 'Locations (Sites)', roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'PROJECT_ADMIN', 'PROJECT_USER', 'LOCATION_USER', 'SITE_USER'] },
-    { to: '/assets', icon: Package, label: 'Barrier Assets' },
+    { to: '/assets', icon: Package, label: 'Assets' },
     { to: '/devices', icon: Cpu, label: 'Devices & Sensors' },
     { to: '/alerts', icon: ShieldAlert, label: 'Alerts & Safety' },
     { to: '/reports', icon: FileText, label: 'Reports & Audits' },

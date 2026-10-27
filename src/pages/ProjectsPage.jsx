@@ -429,7 +429,7 @@ export default function ProjectsPage() {
 
             <p className="text-xs text-text-muted leading-relaxed">
               Are you sure you want to archive project <strong className="text-text">{deleteTarget.name}</strong>?
-              Its associated locations, barrier assets, and sensors will remain safe.
+              Its associated locations, Assets, and sensors will remain safe.
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">

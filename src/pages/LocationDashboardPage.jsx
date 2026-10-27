@@ -78,7 +78,7 @@ export default function LocationDashboardPage() {
                 id: dev.id || dev._id
             }));
 
-            let matchedDevices = allDevices.filter(dev => 
+            let matchedDevices = allDevices.filter(dev =>
                 String(dev.locationId || dev.location_id) === String(id) ||
                 (locName && dev.location === locName) ||
                 dev.location === id
@@ -144,7 +144,7 @@ export default function LocationDashboardPage() {
             // 4. Fetch assigned personnel
             try {
                 const usersRes = await api.users.getAll();
-                const users = (usersRes.users || []).filter(u => 
+                const users = (usersRes.users || []).filter(u =>
                     String(u.locationId || u.location_id) === String(id) ||
                     (u.assignedDevices && u.assignedDevices.some(ad => matchedDevices.some(md => md._id === ad)))
                 );
@@ -325,7 +325,7 @@ export default function LocationDashboardPage() {
                     <div className="px-5 py-3.5 border-b border-border flex items-center justify-between shrink-0 bg-surface-2/40">
                         <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-indigo-400" />
-                            <h2 className="font-semibold text-sm">Site Sensors & Barrier Layout Map</h2>
+                            <h2 className="font-semibold text-sm">Site Sensors & Asset Layout Map</h2>
                         </div>
                         <span className="text-text-dim text-xs font-medium">{devices.length} sensors mapped</span>
                     </div>
@@ -405,7 +405,7 @@ export default function LocationDashboardPage() {
                                     </Marker>
                                 );
                             })}
-                            {/* Render Deployed Barrier Asset Polylines */}
+                            {/* Render Deployed Asset Polylines */}
                             {(loc?.assets || []).map(asset => {
                                 const rawCoords = asset.coordinates || [];
                                 const validCoords = rawCoords
@@ -513,13 +513,13 @@ export default function LocationDashboardPage() {
                 </div>
             </div>
 
-            {/* Location Barrier Assets Section */}
+            {/* Location Assets Section */}
             <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h2 className="font-semibold text-sm flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                            Deployed Barrier Assets at {loc?.name}
+                            Deployed Assets at {loc?.name}
                         </h2>
                         <p className="text-xs text-text-dim mt-0.5">Flexible rockfall catch fences, drapery nets & mounted telemetry sensors</p>
                     </div>
@@ -528,7 +528,7 @@ export default function LocationDashboardPage() {
                             onClick={() => navigate(`/assets/new?locationId=${encodeURIComponent(id)}&orgId=${encodeURIComponent(loc?.organizationId || loc?.org_id || '')}`)}
                             className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-500 transition shadow-sm"
                         >
-                            + Deploy Barrier Asset
+                            + Deploy Asset
                         </button>
                         <span className="text-xs font-semibold px-2.5 py-1 bg-surface-2 border border-border rounded-lg text-text-muted">
                             {loc?.assets?.length || 0} Barriers
@@ -562,7 +562,7 @@ export default function LocationDashboardPage() {
                     })}
                     {(!loc?.assets || loc.assets.length === 0) && (
                         <div className="col-span-full py-8 text-center text-xs text-text-dim">
-                            No barrier assets currently installed at this site location. Click "+ Deploy Barrier Asset" to configure a rockfall barrier.
+                            No Assets currently installed at this site location. Click "+ Deploy Asset" to configure a rockfall barrier.
                         </div>
                     )}
                 </div>

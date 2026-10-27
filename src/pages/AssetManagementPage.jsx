@@ -248,7 +248,7 @@ export default function AssetManagementPage() {
         setRegisteredDevices(Array.isArray(devRes.value?.devices) ? devRes.value.devices : []);
       }
     } catch (err) {
-      setError(err.message || 'Failed to load barrier assets.');
+      setError(err.message || 'Failed to load Assets.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -262,7 +262,7 @@ export default function AssetManagementPage() {
   // Handle flash messages
   useEffect(() => {
     if (location.state?.createdAssetId) {
-      setNotice(`Barrier asset "${location.state.createdAssetId}" was successfully saved.`);
+      setNotice(`Asset "${location.state.createdAssetId}" was successfully saved.`);
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -297,7 +297,7 @@ export default function AssetManagementPage() {
         return false;
       }
 
-      // Barrier Type filter
+      // Asset Type filter
       const bType = asset.asset_type || asset.specifications?.barrierType || 'FENCE_BARRIER';
       if (selectedType && bType !== selectedType) {
         return false;
@@ -377,7 +377,7 @@ export default function AssetManagementPage() {
 
   const handleDeleteAsset = async (asset) => {
     const id = assetIdOf(asset);
-    if (!window.confirm(`Are you sure you want to delete physical barrier "${asset.name || id}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Are you sure you want to delete physical Asset "${asset.name || id}"? This cannot be undone.`)) return;
     try {
       await api.assets.delete(id);
       loadData({ quiet: true });
@@ -395,7 +395,7 @@ export default function AssetManagementPage() {
             <Mountain className="h-4 w-4" /> Physical Rockfall Protection
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl text-text">
-            Barrier Assets & Telemetry Analysis
+            Assets & Telemetry Analysis
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-text-muted">
             Manage deployed flexible catch fences, drapery nets, and rock sheds with mounted vibration & load telemetry nodes.
@@ -417,7 +417,7 @@ export default function AssetManagementPage() {
               onClick={() => navigate('/assets/new')}
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition"
             >
-              <Plus className="h-4 w-4" /> Deploy Barrier Asset
+              <Plus className="h-4 w-4" /> Deploy Asset
             </button>
           )}
         </div>
@@ -468,7 +468,7 @@ export default function AssetManagementPage() {
           <p className="mt-2 text-2xl font-bold tracking-tight text-success">
             {assets.filter(a => (a.status || 'OPERATIONAL') !== 'ALERT').length} Active
           </p>
-          <p className="mt-0.5 text-[11px] text-text-muted">Stable barrier structures</p>
+          <p className="mt-0.5 text-[11px] text-text-muted">Stable Asset structures</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
@@ -486,7 +486,7 @@ export default function AssetManagementPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-indigo-400" />
-            <h2 className="font-semibold text-sm">Filter & Search Barrier Assets</h2>
+            <h2 className="font-semibold text-sm">Filter & Search Assets</h2>
           </div>
 
           {/* View Mode Toggle */}
@@ -565,14 +565,14 @@ export default function AssetManagementPage() {
             </select>
           </div>
 
-          {/* Barrier Type Filter */}
+          {/* Asset Type Filter */}
           <div>
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-xs text-text outline-none focus:border-indigo-500 transition"
             >
-              <option value="">All Barrier Types</option>
+              <option value="">All Asset Types</option>
               <option value="FENCE_BARRIER">Flexible Catch Fence</option>
               <option value="DRAPERY_NET">Drapery Mesh / Net</option>
               <option value="ROCK_SHED">Protective Rock Shed</option>
@@ -612,16 +612,16 @@ export default function AssetManagementPage() {
       {/* Main Assets Content */}
       {loading ? (
         <div className="flex min-h-[300px] items-center justify-center gap-3 rounded-3xl border border-border bg-surface text-sm text-text-muted">
-          <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading physical barrier assets…
+          <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading physical Assets…
         </div>
       ) : filteredAssets.length === 0 ? (
         <div className="rounded-3xl border border-border bg-surface p-12 text-center shadow-sm">
           <Package className="mx-auto h-12 w-12 text-text-dim" />
-          <h3 className="mt-4 text-base font-semibold">No barrier assets found</h3>
+          <h3 className="mt-4 text-base font-semibold">No Assets found</h3>
           <p className="mt-1 text-xs text-text-muted">
             {hasActiveFilters
               ? 'No physical barriers matched your selected filter criteria. Try adjusting or resetting filters.'
-              : 'No barrier assets are currently registered in this organization.'}
+              : 'No Assets are currently registered in this organization.'}
           </p>
           {hasActiveFilters ? (
             <button
@@ -637,7 +637,7 @@ export default function AssetManagementPage() {
               onClick={() => navigate('/assets/new')}
               className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition"
             >
-              + Deploy First Barrier Asset
+              + Deploy First Asset
             </button>
           ) : null}
         </div>
@@ -684,7 +684,7 @@ export default function AssetManagementPage() {
                   </div>
 
                   <p className="mt-2.5 text-xs text-text-muted line-clamp-2 min-h-[32px]">
-                    {asset.description || 'Flexible rockfall barrier installed for slope protection.'}
+                    {asset.description || 'Flexible rockfall Asset installed for slope protection.'}
                   </p>
 
                   {/* Specs Mini-Grid */}
@@ -742,7 +742,7 @@ export default function AssetManagementPage() {
                         type="button"
                         onClick={() => handleDeleteAsset(asset)}
                         className="p-2 rounded-xl border border-rose-500/20 text-text-dim hover:text-danger hover:bg-rose-500/10 transition"
-                        title="Delete Barrier Asset"
+                        title="Delete Asset"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -760,7 +760,7 @@ export default function AssetManagementPage() {
             <table className="w-full text-sm">
               <thead className="bg-surface-2/60 border-b border-border text-xs text-text-muted">
                 <tr>
-                  <th className="px-5 py-3.5 text-left font-medium">Barrier Asset</th>
+                  <th className="px-5 py-3.5 text-left font-medium">Asset</th>
                   <th className="px-4 py-3.5 text-left font-medium">Type</th>
                   <th className="px-4 py-3.5 text-left font-medium">Site Location</th>
                   <th className="px-4 py-3.5 text-left font-medium">Rated Capacity</th>
@@ -891,7 +891,7 @@ export default function AssetManagementPage() {
                       <label htmlFor="quick-attach-pos" className="font-semibold text-text">
                         Placement Position on Barrier: <span className="font-mono text-indigo-400 font-bold">{attachPositionPct}%</span>
                       </label>
-                      <span className="text-[11px] text-text-muted">Drag slider or click barrier on map</span>
+                      <span className="text-[11px] text-text-muted">Drag slider or click Asset on map</span>
                     </div>
 
                     <input

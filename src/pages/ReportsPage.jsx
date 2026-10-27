@@ -46,7 +46,7 @@ const REPORT_TYPES = [
   { id: 'WEEKLY', name: 'Weekly Report', desc: '7-day overview starting from selected date.' },
   { id: 'MONTHLY', name: 'Monthly Statistics', desc: 'Full calendar month activity and trend analysis.' },
   { id: 'ANNUAL_COMPLIANCE', name: 'Annual Compliance Record', desc: 'Long-term geotechnical monitoring audit for the year.' },
-  { id: 'BARRIER_PERFORMANCE', name: 'Barrier Impact Performance', desc: 'Peak impact forces, kinetic energy dissipation & structural review.' },
+  { id: 'BARRIER_PERFORMANCE', name: 'Asset Impact Performance', desc: 'Peak impact forces, kinetic energy dissipation & structural review.' },
   { id: 'INCIDENT', name: 'Incident Audit Report', desc: 'Detailed log of rockfalls, threshold exceedances, and alerts.' },
   { id: 'MAINTENANCE', name: 'Sensor Maintenance Evidence', desc: 'Telemetry uptime, power levels, and RF communication stability.' },
   { id: 'ALL_TIME', name: 'Full Historical Archive', desc: 'Complete dataset across all recorded device telemetry.' }

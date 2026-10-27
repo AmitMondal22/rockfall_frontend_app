@@ -156,13 +156,13 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
   const isDark = theme === 'dark';
   const tile = isDark
     ? {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-      }
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    }
     : {
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '&copy; OpenStreetMap contributors',
-      };
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+    };
 
   const currentStyle = BARRIER_STYLES[barrierType] || BARRIER_STYLES.FENCE_BARRIER;
 
@@ -201,7 +201,7 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
         />
       )}
 
-      {/* Styled Barrier Line based on barrier type */}
+      {/* Styled Asset Line based on Asset Type */}
       {points.length >= 2 && (
         <Polyline
           positions={points.map((point) => [point.lat, point.lng])}
@@ -250,7 +250,7 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
         );
       })}
 
-      {/* Render Attached Device Markers directly on the barrier line */}
+      {/* Render Attached Device Markers directly on the Asset line */}
       {points.length >= 2 && devices.map((dev, idx) => {
         const posPct = dev.asset_position_pct ?? dev.assetPositionPct ?? dev.positionPct ?? ((idx + 1) / (devices.length + 1) * 100);
         const devPt = pointAlongPath(points, posPct);
@@ -274,7 +274,7 @@ function BarrierGeometryMap({ coordinates, devices = [], barrierType = 'FENCE_BA
                   <Radio style={{ width: 12, height: 12, color: '#8b5cf6' }} />
                   {dev.name || dev.id}
                 </strong>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>Mounted on barrier at {Math.round(posPct)}% position</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>Mounted on Asset at {Math.round(posPct)}% position</p>
                 <p style={{ margin: '2px 0 0', fontFamily: 'monospace', fontSize: 11 }}>{devPt.lat.toFixed(6)}, {devPt.lng.toFixed(6)}</p>
               </div>
             </Popup>
@@ -418,7 +418,7 @@ export default function AddBarrierAssetPage() {
           }));
         }
       } catch (error) {
-        if (active) setLoadError(error.message || 'Unable to load barrier data.');
+        if (active) setLoadError(error.message || 'Unable to load Asset data.');
       } finally {
         if (active) setLoading(false);
       }
@@ -453,7 +453,7 @@ export default function AddBarrierAssetPage() {
 
   const locationPoint = useMemo(() => pointFrom(selectedLocation), [selectedLocation]);
   const validCoordinates = useMemo(() => form.coordinates.map(pointFrom).filter(Boolean), [form.coordinates]);
-  
+
   const computedTotalLength = useMemo(() => {
     return totalPolylineLength(validCoordinates);
   }, [validCoordinates]);
@@ -526,7 +526,7 @@ export default function AddBarrierAssetPage() {
 
     const coordinates = form.coordinates.map(pointFrom).filter(Boolean);
     if (coordinates.length < 2) {
-      setSubmitError('Please click on the map to set at least 2 coordinate points (Start & End) for the barrier line.');
+      setSubmitError('Please click on the map to set at least 2 coordinate points (Start & End) for the Asset line.');
       return;
     }
 
@@ -566,7 +566,7 @@ export default function AddBarrierAssetPage() {
         state: { createdAssetId: assetId },
       });
     } catch (error) {
-      setSubmitError(error.message || `Unable to ${isEdit ? 'update' : 'create'} barrier asset.`);
+      setSubmitError(error.message || `Unable to ${isEdit ? 'update' : 'create'} asset.`);
     } finally {
       setSubmitting(false);
     }
@@ -592,23 +592,23 @@ export default function AddBarrierAssetPage() {
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <button type="button" onClick={() => navigate('/assets')} className="mb-4 inline-flex items-center gap-2 text-sm text-text-muted transition hover:text-text">
-            <ArrowLeft className="h-4 w-4" /> Back to barrier assets
+            <ArrowLeft className="h-4 w-4" /> Back to assets
           </button>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-info">
-            <Mountain className="h-4 w-4" /> {isEdit ? 'Edit Asset Geometry' : 'Physical barrier registry'}
+            <Mountain className="h-4 w-4" /> {isEdit ? 'Edit Asset Geometry' : 'Physical Asset registry'}
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-            {isEdit ? `Edit Barrier: ${form.name || id}` : 'Add Barrier Asset'}
+            {isEdit ? `Edit Barrier: ${form.name || id}` : 'Add Asset'}
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-text-muted">
-            Configure barrier properties, select organization & site location, then click along the map to draw the multi-point barrier line path.
+            Configure Asset properties, select organization & site location, then click along the map to draw the multi-point Asset line path.
           </p>
         </div>
       </header>
 
       {loading && (
         <div className="flex min-h-64 items-center justify-center gap-3 rounded-3xl border border-border bg-surface text-sm text-text-muted">
-          <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading barrier asset and geometry data…
+          <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading asset and geometry data…
         </div>
       )}
 
@@ -641,7 +641,7 @@ export default function AddBarrierAssetPage() {
             <div className="border-b border-border bg-gradient-to-r from-indigo-500/10 via-transparent to-transparent px-5 py-4 sm:px-6">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-info"><Building2 className="h-4.5 w-4.5" /></span>
-                <div><h2 className="font-semibold">Identity and Site Ownership</h2><p className="text-xs text-text-muted">Link this barrier to its managing organization and site location.</p></div>
+                <div><h2 className="font-semibold">Identity and Site Ownership</h2><p className="text-xs text-text-muted">Link this Asset to its managing organization and site location.</p></div>
               </div>
             </div>
             <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-6">
@@ -650,7 +650,7 @@ export default function AddBarrierAssetPage() {
                 <input id="asset-id" autoComplete="off" value={form.id} onChange={(event) => setField('id', event.target.value)} disabled={isEdit} className={`${inputClass} font-mono ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`} placeholder="Leave blank to auto-generate" />
               </div>
               <div>
-                <FieldLabel htmlFor="asset-name" required>Barrier Asset Name</FieldLabel>
+                <FieldLabel htmlFor="asset-name" required>Asset Name</FieldLabel>
                 <input id="asset-name" required minLength="2" value={form.name} onChange={(event) => setField('name', event.target.value)} className={inputClass} placeholder="e.g. Catch Fence Sector 04" />
               </div>
               <div>
@@ -711,12 +711,12 @@ export default function AddBarrierAssetPage() {
             <div className="border-b border-border bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent px-5 py-4 sm:px-6">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-success"><Ruler className="h-4.5 w-4.5" /></span>
-                <div><h2 className="font-semibold">Barrier Engineering Specifications</h2><p className="text-xs text-text-muted">Record the rated kinetic energy dissipation and barrier dimensions.</p></div>
+                <div><h2 className="font-semibold">Asset Engineering Specifications</h2><p className="text-xs text-text-muted">Record the rated kinetic energy dissipation and Asset dimensions.</p></div>
               </div>
             </div>
             <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-6">
               <div>
-                <FieldLabel htmlFor="barrier-type" required>Barrier Type</FieldLabel>
+                <FieldLabel htmlFor="barrier-type" required>Asset Type</FieldLabel>
                 <select id="barrier-type" required value={form.barrierType} onChange={(event) => setField('barrierType', event.target.value)} className={inputClass}>
                   <option value="FENCE_BARRIER">Flexible Catch Fence</option>
                   <option value="DRAPERY_NET">Drapery Mesh / Wire Net</option>
@@ -734,12 +734,12 @@ export default function AddBarrierAssetPage() {
                 <input id="length-m" required type="number" min="1" step="any" value={form.lengthM} onChange={(event) => setField('lengthM', event.target.value)} className={inputClass} placeholder="Auto-calculated from map" />
               </div>
               <div>
-                <FieldLabel htmlFor="height-m" required>Barrier Height (m)</FieldLabel>
+                <FieldLabel htmlFor="height-m" required>Asset Height (m)</FieldLabel>
                 <input id="height-m" required type="number" min="0.5" step="any" value={form.heightM} onChange={(event) => setField('heightM', event.target.value)} className={inputClass} placeholder="e.g. 4.5" />
               </div>
               <div className="sm:col-span-2 lg:col-span-4">
                 <FieldLabel htmlFor="description">Engineering Notes & Description</FieldLabel>
-                <input id="description" value={form.description} onChange={(event) => setField('description', event.target.value)} className={inputClass} placeholder="e.g. High-tensile steel mesh barrier installed on upper mountain slope." />
+                <input id="description" value={form.description} onChange={(event) => setField('description', event.target.value)} className={inputClass} placeholder="e.g. High-tensile steel mesh Asset installed on upper mountain slope." />
               </div>
             </div>
           </section>
@@ -750,7 +750,7 @@ export default function AddBarrierAssetPage() {
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500"><Route className="h-4.5 w-4.5" /></span>
                 <div>
-                  <h2 className="font-semibold">Start-to-End Multi-Point Barrier Line</h2>
+                  <h2 className="font-semibold">Start-to-End Multi-Point Asset Line</h2>
                   <p className="text-xs text-text-muted">Click anywhere on the map to add sequential points (P1, P2... PN) along the mountain slope.</p>
                 </div>
               </div>
@@ -835,7 +835,7 @@ export default function AddBarrierAssetPage() {
                     {form.coordinates.length === 0 && (
                       <div className="py-12 text-center text-xs text-text-dim">
                         <Route className="w-8 h-8 mx-auto mb-2 text-indigo-400 opacity-60 animate-pulse" />
-                        Click anywhere on the map to set the starting anchor point (P1), then click along the slope to draw the barrier line.
+                        Click anywhere on the map to set the starting anchor point (P1), then click along the slope to draw the Asset line.
                       </div>
                     )}
                   </div>
@@ -876,7 +876,7 @@ export default function AddBarrierAssetPage() {
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition shadow-md disabled:opacity-50"
             >
               {submitting ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>{isEdit ? 'Save Barrier Updates' : 'Deploy Barrier Asset'}</span>
+              <span>{isEdit ? 'Save Asset Updates' : 'Deploy Asset'}</span>
             </button>
           </div>
         </form>

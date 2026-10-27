@@ -148,7 +148,7 @@ export default function ProjectDashboardPage() {
 
           <div className="bg-surface-2/60 border border-border rounded-2xl p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Barrier Assets</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Assets</span>
               <Package className="w-4 h-4 text-amber-400" />
             </div>
             <p className="text-2xl font-bold mt-2">{assets.length}</p>
@@ -215,13 +215,13 @@ export default function ProjectDashboardPage() {
           </div>
         </div>
 
-        {/* Barrier Assets & Deployed Sensors */}
+        {/* Assets & Deployed Sensors */}
         <div className="bg-surface border border-border rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div>
               <h2 className="text-sm font-bold flex items-center gap-2">
                 <Package className="w-4 h-4 text-amber-400" />
-                Barrier Assets & Installed Sensors ({assets.length})
+                Assets & Installed Sensors ({assets.length})
               </h2>
               <p className="text-xs text-text-dim mt-0.5">Structural barriers with attached telemetry nodes</p>
             </div>
@@ -253,7 +253,7 @@ export default function ProjectDashboardPage() {
             ))}
 
             {assets.length === 0 && (
-              <p className="text-center py-8 text-xs text-text-dim">No barrier assets created under this project.</p>
+              <p className="text-center py-8 text-xs text-text-dim">No Assets created under this project.</p>
             )}
           </div>
         </div>

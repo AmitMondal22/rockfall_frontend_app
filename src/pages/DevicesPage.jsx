@@ -119,7 +119,7 @@ export default function DevicesPage() {
                 }));
                 setOrgs(normalized);
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     function loadLocs() {
@@ -134,7 +134,7 @@ export default function DevicesPage() {
                 }));
                 setLocs(normalized);
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     function loadAssets() {
@@ -143,7 +143,7 @@ export default function DevicesPage() {
             .then((d) => {
                 setAssets(d.assets || []);
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     useEffect(() => {
@@ -161,21 +161,21 @@ export default function DevicesPage() {
                 prev.map((dev) =>
                     dev._id === devId || dev.id === devId
                         ? {
-                              ...dev,
-                              status: 'ONLINE',
-                              battery: d.battery != null ? d.battery : dev.battery,
-                              csq: d.csq != null ? d.csq : dev.csq,
-                              lastSeen: d.timestamp || d.ts || msg.timestamp || new Date().toISOString(),
-                              lastEvent:
-                                  d.event_type && d.event_type !== 'HEARTBEAT'
-                                      ? {
-                                            type: d.event_type,
-                                            peak_g: d.peak_g,
-                                            duration_ms: d.duration_ms,
-                                            timestamp: d.timestamp || d.ts
-                                        }
-                                      : dev.lastEvent
-                          }
+                            ...dev,
+                            status: 'ONLINE',
+                            battery: d.battery != null ? d.battery : dev.battery,
+                            csq: d.csq != null ? d.csq : dev.csq,
+                            lastSeen: d.timestamp || d.ts || msg.timestamp || new Date().toISOString(),
+                            lastEvent:
+                                d.event_type && d.event_type !== 'HEARTBEAT'
+                                    ? {
+                                        type: d.event_type,
+                                        peak_g: d.peak_g,
+                                        duration_ms: d.duration_ms,
+                                        timestamp: d.timestamp || d.ts
+                                    }
+                                    : dev.lastEvent
+                        }
                         : dev
                 )
             );
@@ -322,9 +322,8 @@ export default function DevicesPage() {
     const onlineCount = devices.filter((d) => d.status === 'ONLINE').length;
     const alertCount = devices.filter((d) => d.status === 'ALERT').length;
 
-    const inputCls = `w-full px-3 py-2 bg-surface-2 border border-border rounded-xl text-xs focus:outline-none transition ${
-        isDark ? 'text-white focus:border-white' : 'text-[#111] focus:border-[#111]'
-    }`;
+    const inputCls = `w-full px-3 py-2 bg-surface-2 border border-border rounded-xl text-xs focus:outline-none transition ${isDark ? 'text-white focus:border-white' : 'text-[#111] focus:border-[#111]'
+        }`;
 
     return (
         <div className="space-y-6">
@@ -333,7 +332,7 @@ export default function DevicesPage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Devices & Sensors</h1>
                     <p className="text-text-muted text-sm mt-1">
-                        {devices.length} IoT telemetry sensors & barrier load monitoring nodes
+                        {devices.length} IoT telemetry sensors & Asset load monitoring nodes
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -344,9 +343,8 @@ export default function DevicesPage() {
                                 setEditDevice(null);
                                 resetForm();
                             }}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm ${
-                                isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
-                            }`}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm ${isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
+                                }`}
                         >
                             <Plus className="w-4 h-4" /> Add Device
                         </button>
@@ -400,7 +398,7 @@ export default function DevicesPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs text-text-muted mb-1.5">Mounted Barrier Asset</label>
+                            <label className="block text-xs text-text-muted mb-1.5">Mounted Asset</label>
                             <select
                                 value={form.assetId}
                                 onChange={(e) => {
@@ -415,7 +413,7 @@ export default function DevicesPage() {
                                 }}
                                 className={inputCls}
                             >
-                                <option value="">No Barrier (Standalone Sensor)</option>
+                                <option value="">No Asset (Standalone Sensor)</option>
                                 {assets.map((a) => (
                                     <option key={a.id || a._id} value={a.id || a._id}>
                                         {a.name} ({a.asset_type || 'Barrier'})
@@ -531,9 +529,8 @@ export default function DevicesPage() {
                             </button>
                             <button
                                 type="submit"
-                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition ${
-                                    isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
-                                }`}
+                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition ${isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
+                                    }`}
                             >
                                 {editDevice ? 'Save Changes' : 'Create Device'}
                             </button>
@@ -562,13 +559,12 @@ export default function DevicesPage() {
                             <button
                                 key={st}
                                 onClick={() => setStatusFilter(st)}
-                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${
-                                    statusFilter === st
-                                        ? isDark
-                                            ? 'bg-white/15 text-white'
-                                            : 'bg-slate-900 text-white'
-                                        : 'text-text-muted hover:text-text'
-                                }`}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${statusFilter === st
+                                    ? isDark
+                                        ? 'bg-white/15 text-white'
+                                        : 'bg-slate-900 text-white'
+                                    : 'text-text-muted hover:text-text'
+                                    }`}
                             >
                                 {st}
                             </button>
@@ -580,39 +576,36 @@ export default function DevicesPage() {
                 <div className="flex items-center bg-surface border border-border rounded-xl overflow-hidden self-end md:self-auto p-0.5 shadow-sm">
                     <button
                         onClick={() => toggleView('card')}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition ${
-                            viewMode === 'card'
-                                ? isDark
-                                    ? 'bg-white text-black shadow-sm'
-                                    : 'bg-[#111] text-white shadow-sm'
-                                : 'text-text-muted hover:text-text'
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition ${viewMode === 'card'
+                            ? isDark
+                                ? 'bg-white text-black shadow-sm'
+                                : 'bg-[#111] text-white shadow-sm'
+                            : 'text-text-muted hover:text-text'
+                            }`}
                         title="Card Grid View"
                     >
                         <LayoutGrid className="w-3.5 h-3.5" /> Cards
                     </button>
                     <button
                         onClick={() => toggleView('table')}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition ${
-                            viewMode === 'table'
-                                ? isDark
-                                    ? 'bg-white text-black shadow-sm'
-                                    : 'bg-[#111] text-white shadow-sm'
-                                : 'text-text-muted hover:text-text'
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition ${viewMode === 'table'
+                            ? isDark
+                                ? 'bg-white text-black shadow-sm'
+                                : 'bg-[#111] text-white shadow-sm'
+                            : 'text-text-muted hover:text-text'
+                            }`}
                         title="Detailed Table View"
                     >
                         <List className="w-3.5 h-3.5" /> Table
                     </button>
                     <button
                         onClick={() => toggleView('map')}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg transition ${
-                            viewMode === 'map'
-                                ? isDark
-                                    ? 'bg-indigo-600 text-white shadow-sm'
-                                    : 'bg-indigo-600 text-white shadow-sm'
-                                : 'text-text-muted hover:text-text'
-                        }`}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg transition ${viewMode === 'map'
+                            ? isDark
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-text-muted hover:text-text'
+                            }`}
                         title="Interactive Free Map View"
                     >
                         <MapIcon className="w-3.5 h-3.5" /> Map View
@@ -653,27 +646,25 @@ export default function DevicesPage() {
                                                 setFlyToCoords({ lat: Number(d.lat), lng: Number(d.lng) });
                                             }
                                         }}
-                                        className={`p-3 rounded-xl cursor-pointer transition-all ${
-                                            isSelected
-                                                ? isDark
-                                                    ? 'bg-indigo-600/20 border border-indigo-500/40'
-                                                    : 'bg-indigo-50 border border-indigo-200'
-                                                : 'hover:bg-surface-2 border border-transparent'
-                                        }`}
+                                        className={`p-3 rounded-xl cursor-pointer transition-all ${isSelected
+                                            ? isDark
+                                                ? 'bg-indigo-600/20 border border-indigo-500/40'
+                                                : 'bg-indigo-50 border border-indigo-200'
+                                            : 'hover:bg-surface-2 border border-transparent'
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-1.5">
                                                     <span
-                                                        className={`w-2 h-2 rounded-full ${
-                                                            d.status === 'ONLINE'
-                                                                ? 'bg-emerald-500'
-                                                                : d.status === 'ALERT'
+                                                        className={`w-2 h-2 rounded-full ${d.status === 'ONLINE'
+                                                            ? 'bg-emerald-500'
+                                                            : d.status === 'ALERT'
                                                                 ? 'bg-red-500 animate-pulse'
                                                                 : d.status === 'MAINTENANCE'
-                                                                ? 'bg-amber-500'
-                                                                : 'bg-slate-400'
-                                                        }`}
+                                                                    ? 'bg-amber-500'
+                                                                    : 'bg-slate-400'
+                                                            }`}
                                                     />
                                                     <p className="font-bold text-xs truncate">{d.name}</p>
                                                 </div>
@@ -791,13 +782,12 @@ export default function DevicesPage() {
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="font-bold text-xs text-slate-900">{d.name}</span>
                                                     <span
-                                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                                            d.status === 'ONLINE'
-                                                                ? 'bg-emerald-100 text-emerald-800'
-                                                                : d.status === 'ALERT'
+                                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${d.status === 'ONLINE'
+                                                            ? 'bg-emerald-100 text-emerald-800'
+                                                            : d.status === 'ALERT'
                                                                 ? 'bg-red-100 text-red-800'
                                                                 : 'bg-amber-100 text-amber-800'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {d.status}
                                                     </span>
@@ -881,9 +871,8 @@ export default function DevicesPage() {
                                 <div className="flex gap-2 mt-3 pt-2">
                                     <button
                                         onClick={() => navigate(`/devices/${encodeURIComponent(selectedMapDevice._id)}`)}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                                            isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
-                                        }`}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition ${isDark ? 'bg-white text-black hover:bg-[#ddd]' : 'bg-[#111] text-white hover:bg-[#333]'
+                                            }`}
                                     >
                                         View Device Dashboard <ChevronRight className="w-3.5 h-3.5" />
                                     </button>
@@ -1027,12 +1016,12 @@ export default function DevicesPage() {
                                             <span className="text-[10px]">
                                                 {d.lastSeen
                                                     ? new Date(d.lastSeen).toLocaleString('en-IN', {
-                                                          timeZone: 'Asia/Kolkata',
-                                                          day: '2-digit',
-                                                          month: 'short',
-                                                          hour: '2-digit',
-                                                          minute: '2-digit'
-                                                      })
+                                                        timeZone: 'Asia/Kolkata',
+                                                        day: '2-digit',
+                                                        month: 'short',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })
                                                     : 'Never seen'}
                                             </span>
                                         </div>
@@ -1101,12 +1090,12 @@ export default function DevicesPage() {
                                         <td className="px-4 py-3 text-text-dim text-xs">
                                             {d.lastSeen
                                                 ? new Date(d.lastSeen).toLocaleString('en-IN', {
-                                                      timeZone: 'Asia/Kolkata',
-                                                      day: '2-digit',
-                                                      month: 'short',
-                                                      hour: '2-digit',
-                                                      minute: '2-digit'
-                                                  })
+                                                    timeZone: 'Asia/Kolkata',
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })
                                                 : 'Never'}
                                         </td>
                                         <td className="px-4 py-3">

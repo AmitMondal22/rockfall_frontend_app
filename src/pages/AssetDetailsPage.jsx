@@ -249,14 +249,14 @@ export default function AssetDetailsPage() {
 
       if (assetRes.status === 'rejected') throw assetRes.reason;
       const assetData = assetRes.value?.asset || assetRes.value?.data || assetRes.value;
-      if (!assetData) throw new Error('Barrier asset record not found');
+      if (!assetData) throw new Error('Asset record not found');
       setAsset(assetData);
 
       if (analysisRes.status === 'fulfilled') {
         setAnalysis(analysisRes.value?.analysis || analysisRes.value);
       }
     } catch (err) {
-      setError(err.message || 'Failed to load barrier asset details.');
+      setError(err.message || 'Failed to load Asset details.');
     } finally {
       setLoading(false);
     }
@@ -383,7 +383,7 @@ export default function AssetDetailsPage() {
   if (loading && !asset) {
     return (
       <div className="flex min-h-[400px] items-center justify-center gap-3 rounded-3xl border border-border bg-surface text-sm text-text-muted">
-        <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading barrier asset and live analysis…
+        <LoaderCircle className="h-5 w-5 animate-spin text-info" /> Loading Asset and live analysis…
       </div>
     );
   }
@@ -418,7 +418,7 @@ export default function AssetDetailsPage() {
             onClick={() => navigate('/assets')}
             className="mb-3 inline-flex items-center gap-2 text-xs font-medium text-text-muted transition hover:text-text"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to All Barrier Assets
+            <ArrowLeft className="h-4 w-4" /> Back to All Assets
           </button>
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
@@ -437,10 +437,10 @@ export default function AssetDetailsPage() {
             </span>
           </div>
           <h1 className="mt-2.5 text-2xl font-bold tracking-tight sm:text-3xl text-text">
-            {asset?.name || 'Barrier Asset'}
+            {asset?.name || 'Asset'}
           </h1>
           <p className="mt-1 text-xs text-text-muted">
-            {asset?.description || 'Physical rockfall protection barrier with mounted structural telemetry nodes.'}
+            {asset?.description || 'Physical rockfall protection Asset with mounted structural telemetry nodes.'}
           </p>
         </div>
 
@@ -522,12 +522,12 @@ export default function AssetDetailsPage() {
 
       {/* Main Grid: Interactive Map + Engineering Specs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Interactive Barrier Geometry Map */}
+        {/* Left 2 Cols: Interactive Asset Geometry Map */}
         <div className="lg:col-span-2 rounded-3xl border border-border bg-surface overflow-hidden shadow-sm flex flex-col relative isolate z-0">
           <div className="px-5 py-4 border-b border-border bg-surface-2/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Route className="w-4 h-4 text-indigo-400" />
-              <h2 className="font-semibold text-sm">Barrier Geometry & Mounted Sensor Placement Map</h2>
+              <h2 className="font-semibold text-sm">Asset Geometry & Mounted Sensor Placement Map</h2>
             </div>
             <span className="text-xs font-mono font-semibold text-text-muted">
               {points.length} Points · {formatNumber(specs.lengthM, ' m')} Span
@@ -566,7 +566,7 @@ export default function AssetDetailsPage() {
                 />
               )}
 
-              {/* Styled Barrier Polyline */}
+              {/* Styled Asset Polyline */}
               {points.length >= 2 && (
                 <Polyline
                   positions={points.map((p) => [p.lat, p.lng])}
@@ -606,7 +606,7 @@ export default function AssetDetailsPage() {
                 );
               })}
 
-              {/* Mounted Device Sensor Markers positioned directly on the barrier line */}
+              {/* Mounted Device Sensor Markers positioned directly on the Asset line */}
               {devices.map((dev) => {
                 if (!dev.point) return null;
                 const live = liveSnapshots[dev._id] || {};
@@ -631,7 +631,7 @@ export default function AssetDetailsPage() {
                           {dev.name || dev._id}
                         </strong>
                         <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>
-                          Mounted at <b>{Math.round(dev.posPct)}%</b> along barrier line
+                          Mounted at <b>{Math.round(dev.posPct)}%</b> along Asset line
                         </p>
                         {liveLoad != null && (
                           <p style={{ margin: '3px 0 0', fontSize: 11, color: '#4f46e5', fontWeight: 600 }}>
@@ -664,7 +664,7 @@ export default function AssetDetailsPage() {
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border">
-                <span className="text-text-muted">Barrier Type</span>
+                <span className="text-text-muted">Asset Type</span>
                 <span className="font-semibold text-text flex items-center gap-1.5">
                   {barrierStyle.Icon ? <barrierStyle.Icon className="w-3.5 h-3.5 text-amber-500" /> : <Shield className="w-3.5 h-3.5 text-amber-500" />}
                   <span>{barrierStyle.name}</span>
@@ -679,7 +679,7 @@ export default function AssetDetailsPage() {
                 <span className="font-bold text-text font-mono">{formatNumber(specs.lengthM, ' m')}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border">
-                <span className="text-text-muted">Barrier Height</span>
+                <span className="text-text-muted">Asset Height</span>
                 <span className="font-bold text-text font-mono">{formatNumber(specs.heightM, ' m')}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2 border border-border">
@@ -722,7 +722,7 @@ export default function AssetDetailsPage() {
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Sensor Name</th>
                 <th className="px-4 py-3 text-left font-medium">Hardware ID</th>
-                <th className="px-4 py-3 text-left font-medium">Barrier Position</th>
+                <th className="px-4 py-3 text-left font-medium">Asset Position</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium">Battery</th>
                 <th className="px-4 py-3 text-left font-medium">Signal</th>
@@ -844,9 +844,9 @@ export default function AssetDetailsPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-xs">
                       <label htmlFor="modal-attach-pos" className="font-semibold text-text">
-                        Placement Along Barrier Span: <span className="font-mono text-indigo-400 font-bold">{attachPositionPct}%</span>
+                        Placement Along Asset Span: <span className="font-mono text-indigo-400 font-bold">{attachPositionPct}%</span>
                       </label>
-                      <span className="text-[11px] text-text-muted">Drag slider or click barrier on map</span>
+                      <span className="text-[11px] text-text-muted">Drag slider or click Asset on map</span>
                     </div>
 
                     <input

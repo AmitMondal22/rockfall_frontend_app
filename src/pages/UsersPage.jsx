@@ -43,7 +43,7 @@ const ROLE_INFO = {
   },
   PROJECT_USER: {
     label: 'Project User',
-    desc: 'Manages project sites, barrier assets, and can add/remove devices',
+    desc: 'Manages project sites, Assets, and can add/remove devices',
     badge: 'bg-blue-500/10 text-blue-400 border border-blue-500/30 font-bold',
     Icon: FolderGit2
   },
@@ -55,7 +55,7 @@ const ROLE_INFO = {
   },
   LOCATION_USER: {
     label: 'Site / Location User',
-    desc: 'Manages physical site barrier assets. Can add devices (cannot remove)',
+    desc: 'Manages physical site Assets. Can add devices (cannot remove)',
     badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold',
     Icon: MapPin
   },
@@ -67,7 +67,7 @@ const ROLE_INFO = {
   },
   ASSET_USER: {
     label: 'Asset Operator',
-    desc: 'Assigned specific barrier fence/net. Can add devices (cannot remove)',
+    desc: 'Assigned specific Asset fence/net. Can add devices (cannot remove)',
     badge: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold',
     Icon: ShieldCheck
   },
@@ -377,11 +377,10 @@ export default function UsersPage() {
                 key={r}
                 type="button"
                 onClick={() => setRoleFilter(r)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                  roleFilter === r
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-surface-2 text-text-muted hover:bg-surface-3'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${roleFilter === r
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-surface-2 text-text-muted hover:bg-surface-3'
+                  }`}
               >
                 {r === 'ALL' ? 'All Roles' : ROLE_INFO[r]?.label || r}
               </button>
@@ -602,7 +601,7 @@ export default function UsersPage() {
                     <option value="ORG_ADMIN">ORG_ADMIN — Organization Admin (All Projects & Sites in Org)</option>
                     <option value="PROJECT_USER">PROJECT_USER — Project Manager (Add & Remove Devices in Project)</option>
                     <option value="LOCATION_USER">LOCATION_USER — Site / Location User (Add Device Only)</option>
-                    <option value="ASSET_USER">ASSET_USER — Barrier Asset Operator (Add Device Only)</option>
+                    <option value="ASSET_USER">ASSET_USER — Asset Operator (Add Device Only)</option>
                     <option value="USER">USER — Read-Only Viewer</option>
                   </select>
                   <p className="mt-1 text-[11px] text-text-dim">
@@ -667,11 +666,11 @@ export default function UsersPage() {
                   </select>
                 </div>
 
-                {/* Specific Barrier Asset Assignment if ASSET_USER */}
+                {/* Specific Asset Assignment if ASSET_USER */}
                 {form.role === 'ASSET_USER' && (
                   <div className="sm:col-span-2 p-3 rounded-2xl border border-border bg-surface/50 space-y-2">
                     <label className="block text-xs font-semibold text-text-muted">
-                      Assigned Barrier Asset(s)
+                      Assigned Asset(s)
                     </label>
                     <div className="max-h-32 overflow-y-auto space-y-1.5">
                       {availableAssets.map(a => {
@@ -698,7 +697,7 @@ export default function UsersPage() {
                         );
                       })}
                       {availableAssets.length === 0 && (
-                        <p className="text-xs text-text-dim">No barrier assets found for this site/project.</p>
+                        <p className="text-xs text-text-dim">No Assets found for this site/project.</p>
                       )}
                     </div>
                   </div>
